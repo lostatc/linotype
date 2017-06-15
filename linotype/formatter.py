@@ -29,8 +29,8 @@ class HelpFormatter:
         indent_increment: The number of spaces to increase/decrease the indent
             level by for each level.
         width: The number of columns at which to wrap text in the help message.
-        fancy_output: Apply 'strong' and 'emphasized' formatting to certain
-            text in the output.
+        auto_markup: Automatically apply 'strong' and 'emphasized' formatting
+            to certain text in the output.
         strong: the strings to print before and after strong text (default is
             ANSI bold). These are ignored when wrapping text.
         em: The strings to print before and after emphasized text (default is
@@ -40,18 +40,19 @@ class HelpFormatter:
         indent_increment: The number of spaces to increase/decrease the indent
             level by for each level.
         width: The number of columns at which to wrap text in the help message.
-        fancy_output: Add additional output formatting with markup.
+        auto_markup: Automatically apply 'strong' and 'emphasized' formatting
+            to certain text in the output.
         strong: the strings to print before and after strong text (default is
             ANSI bold). These are ignored when wrapping text.
         em: The strings to print before and after emphasized text (default is
             ANSI underlined). These are ignored when wrapping text.
     """
     def __init__(
-            self, indent_increment=4, width=79, fancy_output=True,
+            self, indent_increment=4, width=79, auto_markup=True,
             strong=("\33[1m", "\33[0m"), em=("\33[4m", "\33[0m")) -> None:
         self.indent_increment = indent_increment
         self.width = width
-        self.fancy_output = fancy_output
+        self.auto_markup = auto_markup
         self.strong = strong
         self.em = em
 
@@ -60,10 +61,11 @@ class HelpItem:
     """Format an item in a help message.
 
     This class allows for formatting a help message consisting of a tree of
-    "items". There are multiple types of items to choose from. Every item
+    "items". There are multiple types of items to choose from, and every item
     can contain zero or more other items. A help message can be printed
     starting at any point in the tree, and the output is automatically
-    formatted according to input parameters.
+    formatted according to input parameters. HelpFormatter objects can be
+    passed in whenever a new item in created to affect its formatting.
 
     Args:
         formatter: The formatter object for the item tree.
@@ -276,7 +278,7 @@ class HelpItem:
         Returns:
             The input string with markup for strong text added.
         """
-        if self._formatter.fancy_output:
+        if self._formatter.auto_markup:
             return self._formatter.strong[0] + text + self._formatter.strong[1]
         else:
             return text
@@ -287,7 +289,7 @@ class HelpItem:
         Returns:
             The input string with markup for emphasized text added.
         """
-        if self._formatter.fancy_output:
+        if self._formatter.auto_markup:
             return self._ARG_REGEX.sub(
                 self._formatter.em[0] + r"\g<1>" + self._formatter.em[1], text)
         else:
