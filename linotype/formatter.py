@@ -31,6 +31,7 @@ class HelpFormatter:
         width: The number of columns at which to wrap text in the help message.
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
+        visible: Make the text visible in the output.
         strong: the strings to print before and after strong text (default is
             ANSI bold). These are ignored when wrapping text.
         em: The strings to print before and after emphasized text (default is
@@ -42,17 +43,19 @@ class HelpFormatter:
         width: The number of columns at which to wrap text in the help message.
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
+        visible: Make the text visible in the output.
         strong: the strings to print before and after strong text (default is
             ANSI bold). These are ignored when wrapping text.
         em: The strings to print before and after emphasized text (default is
             ANSI underlined). These are ignored when wrapping text.
     """
     def __init__(
-            self, indent_increment=4, width=79, auto_markup=True,
+            self, indent_increment=4, width=79, auto_markup=True, visible=True,
             strong=("\33[1m", "\33[0m"), em=("\33[4m", "\33[0m")) -> None:
         self.indent_increment = indent_increment
         self.width = width
         self.auto_markup = auto_markup
+        self.visible = visible
         self.strong = strong
         self.em = em
 
@@ -217,7 +220,8 @@ class HelpItem:
             if item._content is not None:
                 help_messages.append(item._format_item())
 
-        return "\n".join(help_messages)
+        return "\n".join([
+            message for message in help_messages if message is not None])
 
     def _format_item(self) -> str:
         """Format the items belonging to this item.
@@ -225,13 +229,13 @@ class HelpItem:
         Returns:
             A formatted help message as a string.
         """
-        if self._content:
+        if self._content and self._formatter.visible:
             # The formatting functions are static methods so that the
             # current item instance can be passed in instead of the parent
             # item instance.
             help_msg = self._format_func(self, self._content)
         else:
-            help_msg = ""
+            help_msg = None
 
         return help_msg
 
