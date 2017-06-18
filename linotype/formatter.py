@@ -21,6 +21,8 @@ import re
 import textwrap
 from typing import Any, Callable, Tuple, Generator
 
+ARG_REGEX = re.compile(r"([\w-]+)")
+
 
 class HelpFormatter:
     """Dynamically format a help message.
@@ -74,21 +76,20 @@ class HelpItem:
         formatter: The formatter object for the item tree.
 
     Attributes:
-        _ARG_REGEX: A regex object that denotes an argument from an argument
-            string.
         _INLINE_SPACE: The number of spaces between the argument string and
             the message in definitions with the "inline" or "aligned" style.
         _items: A list of HelpItem objects in the help message.
         _content: The content to display in the help message.
+        _type: The type of item that the current item it.
         _format_func: The function used to format the current content.
         _current_indent: The current indent level as a number of spaces.
         _parent: The parent item object.
     """
-    _ARG_REGEX = re.compile(r"([\w-]+)")
     _INLINE_SPACE = 2
 
     def __init__(self, formatter: HelpFormatter) -> None:
         self._formatter = formatter
+        self._type = None
         self._content = None
         self._format_func = None
         self._current_indent = 0
@@ -97,16 +98,37 @@ class HelpItem:
 
     @classmethod
     def _new_item(
-            cls, content: Any, format_func: Callable, starting_indent: int,
-            parent: "HelpItem", formatter: HelpFormatter) -> "HelpItem":
+            cls, item_type: str, content: Any, format_func: Callable,
+            starting_indent: int, parent: "HelpItem", formatter: HelpFormatter
+            ) -> "HelpItem":
+        """Construct a new item."""
         new_item = cls(formatter)
-        new_item._items = []
         new_item._content = content
+        new_item._type = item_type
         new_item._format_func = format_func
         new_item._current_indent = starting_indent
         new_item._parent = parent
 
         return new_item
+
+    def __iadd__(self, other: "HelpItem") -> "HelpItem":
+        """Add another HelpItem object to the list of items.
+
+        Args:
+            other: The HelpItem object to add.
+        """
+        if isinstance(other, type(self)):
+            for item in other._get_items():
+                item._current_indent += self._formatter.indent_increment
+            for item in other._items:
+                # Exclude the empty root-level item so that formatting only to
+                # a certain depth works as expected.
+                self._items.append(item)
+            return self
+        else:
+            raise TypeError(
+                "unsupported operand type(s) for +=: '{0}' and '{1}'".format(
+                    type(self), type(other)))
 
     # Message building methods
     # ========================
@@ -122,7 +144,8 @@ class HelpItem:
                 the new item. If 'None', it uses the help formatter of its
                 parent item.
         """
-        return self._add_item(text, self._format_text, formatter=formatter)
+        return self._add_item(
+            "text", text, self._format_text, formatter=formatter)
 
     def add_definition(
             self, name: str, args: str, msg: str, style="heading",
@@ -166,14 +189,15 @@ class HelpItem:
                 "unrecognized definition style '{}'".format(style))
 
         return self._add_item(
-            (name, args, msg), format_func, formatter=formatter)
+            "definition", (name, args, msg), format_func, formatter=formatter)
 
     def _add_item(
-            self, content: Any, format_func: Callable, formatter=None
-            ) -> "HelpItem":
+            self, item_type: str, content: Any, format_func: Callable,
+            formatter=None) -> "HelpItem":
         """Add a new item under the current item.
 
         Args:
+            item_type: The type of item that the current item is.
             content: The content to print.
             format_func: The function used to format the content.
             formatter: A HelpFormatter object for defining the formatting of
@@ -187,7 +211,8 @@ class HelpItem:
             formatter = self._formatter
 
         new_item = self._new_item(
-            content, format_func, self._current_indent, self, formatter)
+            item_type, content, format_func, self._current_indent, self,
+            formatter)
         self._items.append(new_item)
 
         if self._content:
@@ -240,7 +265,7 @@ class HelpItem:
         return help_msg
 
     def _get_items(
-            self, item=None, levels=None, counter=0, last_item=None
+            self, item=None, levels=None, counter=0
             ) -> Generator["HelpItem", None, None]:
         """Recursively yield nested items.
 
@@ -276,46 +301,45 @@ class HelpItem:
         else:
             self._current_indent = new_indent
 
-    def _markup_name(self, text: str) -> str:
+    def _markup_name(self, name_string: str) -> str:
         """Make the input string strong.
 
         Returns:
             The input string with markup for strong text added.
         """
         if self._formatter.auto_markup:
-            return self._formatter.strong[0] + text + self._formatter.strong[1]
+            return self._formatter.strong[0] + name_string + self._formatter.strong[1]
         else:
-            return text
+            return name_string
 
-    def _markup_args(self, text: str) -> str:
+    def _markup_args(self, args_string: str) -> str:
         """Make argument names in the input string emphasized.
 
         Returns:
             The input string with markup for emphasized text added.
         """
         if self._formatter.auto_markup:
-            return self._ARG_REGEX.sub(
-                self._formatter.em[0] + r"\g<1>" + self._formatter.em[1], text)
+            return ARG_REGEX.sub(
+                self._formatter.em[0] + r"\g<1>" + self._formatter.em[1], args_string)
         else:
-            return text
+            return args_string
 
     def _sub_args(self, args: str, text: str) -> str:
-        """Search a string for arguments and add fancy formatting.
+        """Search a string for arguments and add markup.
 
         This method only formats arguments surrounded by non-word characters.
 
         Args:
-            text: The string to have control codes added.
-            args: The argument string to get argument from.
+            text: The string to have markup added to.
+            args: The argument string to get arguments from.
 
         Returns:
-            The given text with control codes added.
+            The given text with markup added.
         """
-        for arg in self._ARG_REGEX.findall(args):
+        for arg in ARG_REGEX.findall(args):
             text = re.sub(
-                r"(^|\W){}($|\W)".format(re.escape(arg)),
-                r"\g<1>" + self._markup_args(arg) + r"\g<2>",
-                text)
+                r"(?<!\w){}(?!\w)".format(re.escape(arg)),
+                self._markup_args(arg), text)
         return text
 
     def _get_wrapper(
