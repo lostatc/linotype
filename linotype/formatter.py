@@ -72,6 +72,10 @@ class HelpItem:
     formatted according to input parameters. HelpFormatter objects can be
     passed in whenever a new item in created to affect its formatting.
 
+    New child items can be created under the current item using one of the
+    available public methods, and existing items can be made child items of
+    the current item using the '+=' operator.
+
     Args:
         formatter: The formatter object for the item tree.
 
@@ -82,8 +86,10 @@ class HelpItem:
         _content: The content to display in the help message.
         _type: The type of item that the current item it.
         _format_func: The function used to format the current content.
-        _current_indent: The current indent level as a number of spaces.
         _parent: The parent item object.
+        _current_indent: The number of spaces that the item is currently
+            indented.
+        _current_level: The current indentation level.
     """
     _INLINE_SPACE = 2
 
@@ -92,22 +98,27 @@ class HelpItem:
         self._type = None
         self._content = None
         self._format_func = None
-        self._current_indent = 0
         self._parent = None
+        self._current_indent = 0
         self._items = []
+
+    @property
+    def _current_level(self) -> int:
+        """The current indentation level."""
+        return int(self._current_indent / self._formatter.indent_increment)
 
     @classmethod
     def _new_item(
             cls, item_type: str, content: Any, format_func: Callable,
-            starting_indent: int, parent: "HelpItem", formatter: HelpFormatter
+            parent: "HelpItem", starting_indent: int, formatter: HelpFormatter
             ) -> "HelpItem":
         """Construct a new item."""
         new_item = cls(formatter)
         new_item._content = content
         new_item._type = item_type
         new_item._format_func = format_func
-        new_item._current_indent = starting_indent
         new_item._parent = parent
+        new_item._current_indent = starting_indent
 
         return new_item
 
@@ -211,7 +222,7 @@ class HelpItem:
             formatter = self._formatter
 
         new_item = self._new_item(
-            item_type, content, format_func, self._current_indent, self,
+            item_type, content, format_func, self, self._current_indent,
             formatter)
         self._items.append(new_item)
 
