@@ -141,6 +141,9 @@ class LinotypeDirective(Directive):
         Args:
             item: The HelpItem object to convert to a Node object.
 
+        Raises:
+            ValueError: The type of the given item was not recognized.
+
         Returns:
             A Node object.
         """

@@ -129,6 +129,9 @@ class HelpItem:
 
         Args:
             other: The HelpItem object to add.
+
+        Raises:
+            TypeError: The input was an unsupported type.
         """
         if isinstance(other, type(self)):
             for item in other.get_items():
@@ -190,6 +193,9 @@ class HelpItem:
             formatter: A HelpFormatter object for defining the formatting of
                 the new item. If 'None', it uses the help formatter of its
                 parent item.
+
+        Raises:
+            ValueError: The given style was not recognized.
         """
         if style == "heading":
             format_func = self._format_heading_def
