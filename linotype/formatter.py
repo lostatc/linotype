@@ -261,6 +261,18 @@ class HelpItem:
         return "\n".join([
             message for message in help_messages if message is not None])
 
+    def get_items(self, levels=None) -> Generator["HelpItem", None, None]:
+        """Recursively yield nested items.
+
+        Args:
+            levels: The number of levels of nested items to descend into.
+                'None' means that there is no limit.
+
+        Yields:
+            Each item in the tree.
+        """
+        yield from self._get_items(self, levels)
+
     def _format_item(self) -> str:
         """Format the items belonging to this item.
 
@@ -277,8 +289,8 @@ class HelpItem:
 
         return help_msg
 
-    def get_items(
-            self, item=None, levels=None, counter=0
+    def _get_items(
+            self, item: "HelpItem", levels: int, counter=0
             ) -> Generator["HelpItem", None, None]:
         """Recursively yield nested items.
 
@@ -292,15 +304,12 @@ class HelpItem:
         Yields:
             Each item in the tree.
         """
-        if item is None:
-            item = self
-
         yield item
 
         if levels is None or counter < levels:
             for item in item._items:
-                yield from self.get_items(
-                    item, levels=levels, counter=counter+1)
+                yield from self._get_items(
+                    item, levels, counter=counter+1)
 
     def _indent(self) -> None:
         """Increase the indentation level."""
