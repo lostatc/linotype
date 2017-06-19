@@ -11,6 +11,7 @@ linotype documentation
    :caption: Contents:
 
    api
+   usage
 
 Indices and tables
 ==================
