@@ -8,6 +8,6 @@ setup(
     author="Garrett Powell",
     author_email="garrett@gpowell.net",
     license="GPLv3",
-    install_requires=[],
+    install_requires=["Sphinx"],
     python_requires=">=3.5",
     packages=["linotype"])
