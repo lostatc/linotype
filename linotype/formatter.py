@@ -34,6 +34,8 @@ class HelpFormatter:
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
         visible: Make the text visible in the output.
+        inline_space: The number of spaces to leave between the argument string
+            and message of each definition when they are on the same line.
         strong: the strings to print before and after strong text (default is
             ANSI bold). These are ignored when wrapping text.
         em: The strings to print before and after emphasized text (default is
@@ -46,6 +48,8 @@ class HelpFormatter:
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
         visible: Make the text visible in the output.
+        inline_space: The number of spaces to leave between the argument string
+            and message of each definition when they are on the same line.
         strong: the strings to print before and after strong text (default is
             ANSI bold). These are ignored when wrapping text.
         em: The strings to print before and after emphasized text (default is
@@ -53,11 +57,13 @@ class HelpFormatter:
     """
     def __init__(
             self, indent_increment=4, width=79, auto_markup=True, visible=True,
-            strong=("\33[1m", "\33[0m"), em=("\33[4m", "\33[0m")) -> None:
+            inline_space=2, strong=("\33[1m", "\33[0m"),
+            em=("\33[4m", "\33[0m")) -> None:
         self.indent_increment = indent_increment
         self.width = width
         self.auto_markup = auto_markup
         self.visible = visible
+        self.inline_space = inline_space
         self.strong = strong
         self.em = em
 
@@ -79,8 +85,6 @@ class HelpItem:
         formatter: The formatter object for the item tree.
 
     Attributes:
-        _INLINE_SPACE: The number of spaces between the argument string and
-            the message in definitions with the "inline" or "aligned" style.
         type: The type of item that the current item it.
         content: The content to display in the help message.
         _format_func: The function used to format the current content.
@@ -91,8 +95,6 @@ class HelpItem:
         current_level: The current indentation level.
         _items: A list of HelpItem objects in the help message.
     """
-    _INLINE_SPACE = 2
-
     def __init__(self, formatter: HelpFormatter) -> None:
         self.type = None
         self.content = None
@@ -427,7 +429,7 @@ class HelpItem:
         else:
             longest = len(
                 " ".join([string for string in (name, args) if string]))
-        sig_buffer = longest + self._INLINE_SPACE
+        sig_buffer = longest + self._formatter.inline_space
         name_buffer = len(name)
 
         # Markup must be added after all text formatting has occurred
