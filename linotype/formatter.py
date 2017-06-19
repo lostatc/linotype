@@ -25,7 +25,7 @@ ARG_REGEX = re.compile(r"([\w-]+)")
 
 
 class HelpFormatter:
-    """Dynamically format a help message.
+    """Control how terminal output is formatted.
 
     Args:
         indent_increment: The number of spaces to increase/decrease the indent
@@ -66,15 +66,14 @@ class HelpItem:
     """Format an item in a help message.
 
     This class allows for formatting a help message consisting of a tree of
-    "items". There are multiple types of items to choose from, and every item
-    can contain zero or more other items. A help message can be printed
+    "items". There are multiple types of items to choose from, and every
+    item can contain zero or more other items. A help message can be printed
     starting at any point in the tree, and the output is automatically
-    formatted according to input parameters. HelpFormatter objects can be
-    passed in whenever a new item in created to affect its formatting.
+    formatted according to the formatter object passed in. Formatter objects
+    can be passed in whenever a new item in created to affect its formatting.
 
-    New child items can be created under the current item using one of the
-    available public methods, and existing items can be made child items of
-    the current item using the '+=' operator.
+    New child items can be created using one of the available public
+    methods, and new child items can be added using the '+=' operator.
 
     Args:
         formatter: The formatter object for the item tree.
@@ -82,28 +81,29 @@ class HelpItem:
     Attributes:
         _INLINE_SPACE: The number of spaces between the argument string and
             the message in definitions with the "inline" or "aligned" style.
-        _items: A list of HelpItem objects in the help message.
-        _content: The content to display in the help message.
-        _type: The type of item that the current item it.
+        type: The type of item that the current item it.
+        content: The content to display in the help message.
         _format_func: The function used to format the current content.
         _parent: The parent item object.
         _current_indent: The number of spaces that the item is currently
             indented.
-        _current_level: The current indentation level.
+        _formatter: The formatter object for the item tree.
+        current_level: The current indentation level.
+        _items: A list of HelpItem objects in the help message.
     """
     _INLINE_SPACE = 2
 
     def __init__(self, formatter: HelpFormatter) -> None:
-        self._formatter = formatter
-        self._type = None
-        self._content = None
+        self.type = None
+        self.content = None
         self._format_func = None
         self._parent = None
         self._current_indent = 0
+        self._formatter = formatter
         self._items = []
 
     @property
-    def _current_level(self) -> int:
+    def current_level(self) -> int:
         """The current indentation level."""
         return int(self._current_indent / self._formatter.indent_increment)
 
@@ -114,8 +114,8 @@ class HelpItem:
             ) -> "HelpItem":
         """Construct a new item."""
         new_item = cls(formatter)
-        new_item._content = content
-        new_item._type = item_type
+        new_item.content = content
+        new_item.type = item_type
         new_item._format_func = format_func
         new_item._parent = parent
         new_item._current_indent = starting_indent
@@ -129,7 +129,7 @@ class HelpItem:
             other: The HelpItem object to add.
         """
         if isinstance(other, type(self)):
-            for item in other._get_items():
+            for item in other.get_items():
                 item._current_indent += self._formatter.indent_increment
             for item in other._items:
                 # Exclude the empty root-level item so that formatting only to
@@ -215,7 +215,7 @@ class HelpItem:
                 the new item. If 'None', it uses the help formatter of its
                 parent item.
         """
-        if self._content:
+        if self.content:
             self._indent()
 
         if formatter is None:
@@ -226,7 +226,7 @@ class HelpItem:
             formatter)
         self._items.append(new_item)
 
-        if self._content:
+        if self.content:
             self._dedent()
 
         return new_item
@@ -251,9 +251,9 @@ class HelpItem:
         # Dedent the output so that it's flush with the left edge.
         dedent_amount = self._current_indent
         help_messages = []
-        for item in self._get_items(levels=levels):
+        for item in self.get_items(levels=levels):
             item._current_indent -= dedent_amount
-            if item._content is not None:
+            if item.content is not None:
                 help_messages.append(item._format_item())
 
         return "\n".join([
@@ -265,17 +265,17 @@ class HelpItem:
         Returns:
             A formatted help message as a string.
         """
-        if self._content and self._formatter.visible:
+        if self.content and self._formatter.visible:
             # The formatting functions are static methods so that the
             # current item instance can be passed in instead of the parent
             # item instance.
-            help_msg = self._format_func(self, self._content)
+            help_msg = self._format_func(self, self.content)
         else:
             help_msg = None
 
         return help_msg
 
-    def _get_items(
+    def get_items(
             self, item=None, levels=None, counter=0
             ) -> Generator["HelpItem", None, None]:
         """Recursively yield nested items.
@@ -297,7 +297,7 @@ class HelpItem:
 
         if levels is None or counter < levels:
             for item in item._items:
-                yield from self._get_items(
+                yield from self.get_items(
                     item, levels=levels, counter=counter+1)
 
     def _indent(self) -> None:
@@ -419,7 +419,7 @@ class HelpItem:
         name, args, msg = definition
         if aligned:
             inline_content = (
-                item._content for item in self._parent._items
+                item.content for item in self._parent._items
                 if item._format_func == self._format_aligned_def)
             longest = max(
                 len(" ".join([string for string in (name, args) if string]))

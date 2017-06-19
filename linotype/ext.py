@@ -144,12 +144,12 @@ class LinotypeDirective(Directive):
         Returns:
             A Node object.
         """
-        if item._type is None:
+        if item.type is None:
             node = nodes.definition_list()
-        elif item._type == "text":
-            node = nodes.paragraph(text=item._content)
-        elif item._type == "definition":
-            name, args, msg = item._content
+        elif item.type == "text":
+            node = nodes.paragraph(text=item.content)
+        elif item.type == "definition":
+            name, args, msg = item.content
             node = nodes.definition_list_item(
                     "", nodes.term(
                         "", "", self._markup_name(name), nodes.Text(" "),
@@ -158,7 +158,7 @@ class LinotypeDirective(Directive):
                         "", nodes.paragraph(
                             "", "", *self._sub_args(args, msg))))
         else:
-            raise ValueError("unrecognized item type '{0}'".format(item._type))
+            raise ValueError("unrecognized item type '{0}'".format(item.type))
 
         return node
 
@@ -172,7 +172,7 @@ class LinotypeDirective(Directive):
         Returns:
             The root Node object of the tree.
         """
-        if help_item._type is None:
+        if help_item.type is None:
             root_node = self._parse_item(help_item)
         else:
             root_node = nodes.definition_list()
@@ -185,21 +185,21 @@ class LinotypeDirective(Directive):
         parent_node = root_node
         current_level = 0
 
-        for item in help_item._get_items():
-            if item._current_level > current_level:
+        for item in help_item.get_items():
+            if item.current_level > current_level:
                 # The indentation level increased.
                 ancestor_nodes.append(parent_node)
                 parent_node = nodes.block_quote()
                 ancestor_nodes[-1] += parent_node
 
-            elif item._current_level < current_level:
+            elif item.current_level < current_level:
                 # The indentation level decreased.
-                for i in range(current_level - item._current_indent):
+                for i in range(current_level - item.current_level):
                     past_parent = ancestor_nodes.pop()
                 parent_node = past_parent
 
             parent_node += self._parse_item(item)
-            current_level = item._current_level
+            current_level = item.current_level
 
         return root_node
 
