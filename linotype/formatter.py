@@ -286,8 +286,8 @@ class HelpItem:
             item: The item to find descendants of. If 'None', this defaults to
                 self.
             levels: The number of levels of nested items to descend into.
-            counter: Do not override this attribute. It tracks the recursion
-                depth.
+                'None' means that there is no limit.
+            counter: This parameter tracks the recursion depth.
 
         Yields:
             Each item in the tree.
