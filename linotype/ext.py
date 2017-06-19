@@ -20,6 +20,7 @@ along with linotype.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
 import importlib
+import collections
 from typing import List
 
 from docutils import nodes
@@ -42,7 +43,7 @@ class LinotypeDirective(Directive):
         "no_auto_markup": flag}
 
     def _get_help_item(self) -> HelpItem:
-        """Get the HelpItem object from the given module or file."""
+        """Get the HelpItem object from the given module or filepath."""
         if "module" in self.options and "func" in self.options:
             # Import from given module.
             module_name = self.options["module"]
@@ -107,25 +108,25 @@ class LinotypeDirective(Directive):
         else:
             return nodes.strong(text=name_string)
 
-    def _sub_args(self, args: str, text: str) -> List[nodes.Node]:
+    def _sub_args(self, args_string: str, text: str) -> List[nodes.Node]:
         """Search a string for arguments and add markup.
 
         This method only formats arguments surrounded by non-word characters.
 
         Args:
             text: The string to have markup added to.
-            args: The argument string to get arguments from.
+            args_string: The argument string to get arguments from.
 
         Returns:
             The given text with markup added.
         """
-        if "no_auto_markup" in self.options or not args:
+        if "no_auto_markup" in self.options or not args_string:
             return [nodes.Text(text)]
         else:
             output_nodes = []
             arg_regex = re.compile(
                 r"(?<!\w)({})(?!\w)".format("|".join(
-                    re.escape(arg) for arg in ARG_REGEX.findall(args))))
+                    re.escape(arg) for arg in ARG_REGEX.findall(args_string))))
             for string in arg_regex.split(text):
                 if arg_regex.search(string):
                     output_nodes.append(nodes.emphasis(text=string))
@@ -135,55 +136,81 @@ class LinotypeDirective(Directive):
             return output_nodes
 
     def _parse_item(self, item: HelpItem) -> nodes.Node:
-        """Convert a HelpItem object to a docutils node.
+        """Convert a HelpItem object to a docutils Node object.
+
+        Args:
+            item: The HelpItem object to convert to a Node object.
 
         Returns:
-            A node object.
+            A Node object.
         """
-        if item._type == "text":
+        if item._type is None:
+            node = nodes.definition_list()
+        elif item._type == "text":
             node = nodes.paragraph(text=item._content)
         elif item._type == "definition":
             name, args, msg = item._content
-            signature = [nodes.strong(text=name)] + self._markup_args(args)
-            node = nodes.definition_list(
-                "", nodes.definition_list_item(
+            node = nodes.definition_list_item(
                     "", nodes.term(
                         "", "", self._markup_name(name), nodes.Text(" "),
                         *self._markup_args(args)),
                     nodes.definition(
                         "", nodes.paragraph(
-                            "", "", *self._sub_args(args, msg)))))
+                            "", "", *self._sub_args(args, msg))))
         else:
             raise ValueError("unrecognized item type '{0}'".format(item._type))
 
         return node
 
     def _parse_tree(self, help_item: HelpItem) -> nodes.Node:
-        """Recursively iterate over a HelpItem object to generate nodes.
+        """Recursively iterate over a HelpItem object to generate Node objects.
 
         Args:
             help_item: The HelpItem object to convert to a tree of docutils
-                nodes.
-        """
-        node = self._parse_item(help_item)
-        for item in help_item._items:
-                node += self._parse_tree(item)
-        return node
-
-    def run(self) -> List[nodes.Node]:
-        """Convert a HelpItem object to a docutils node tree.
+                Node objects.
 
         Returns:
-            A list of node objects.
+            The root Node object of the tree.
+        """
+        if help_item._type is None:
+            root_node = self._parse_item(help_item)
+        else:
+            root_node = nodes.definition_list()
+
+        # This keeps track of the current indentation level by maintaining a
+        # queue with the current parent node on the right and all of its
+        # ancestors up the tree moving to the left.
+        ancestor_nodes = collections.deque()
+
+        parent_node = root_node
+        current_level = 0
+
+        for item in help_item._get_items():
+            if item._current_level > current_level:
+                # The indentation level increased.
+                ancestor_nodes.append(parent_node)
+                parent_node = nodes.block_quote()
+                ancestor_nodes[-1] += parent_node
+
+            elif item._current_level < current_level:
+                # The indentation level decreased.
+                for i in range(current_level - item._current_indent):
+                    past_parent = ancestor_nodes.pop()
+                parent_node = past_parent
+
+            parent_node += self._parse_item(item)
+            current_level = item._current_level
+
+        return root_node
+
+    def run(self) -> List[nodes.Node]:
+        """Convert a HelpItem object to a docutils Node tree.
+
+        Returns:
+            A list of Node objects.
         """
         help_item = self._get_help_item()
-        if help_item._type is None:
-            # Exclude the empty root-level item.
-            help_items = help_item._items
-        else:
-            help_items = [help_item]
-
-        return [self._parse_tree(item) for item in help_items]
+        return [self._parse_tree(help_item)]
 
 
 def setup(app) -> None:
