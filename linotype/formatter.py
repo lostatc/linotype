@@ -36,7 +36,7 @@ class HelpFormatter:
         visible: Make the text visible in the output.
         inline_space: The number of spaces to leave between the argument string
             and message of each definition when they are on the same line.
-        strong: the strings to print before and after strong text (default is
+        strong: The strings to print before and after strong text (default is
             ANSI bold). These are ignored when wrapping text.
         em: The strings to print before and after emphasized text (default is
             ANSI underlined). These are ignored when wrapping text.
@@ -154,11 +154,14 @@ class HelpItem:
 
         This item displays the given text wrapped to the given width.
 
-        Args;
+        Args:
             text: The text to be printed.
             formatter: A HelpFormatter object for defining the formatting of
                 the new item. If 'None', it uses the help formatter of its
                 parent item.
+
+        Returns:
+            The new HelpItem object.
         """
         return self._add_item(
             "text", text, self._format_text, formatter=formatter)
@@ -182,20 +185,26 @@ class HelpItem:
                 that appear in the argument string emphasized if fancy output
                 is enabled.
             style: The style of definition to use.
+
                 "heading": Display the message on a separate line from the name
-                    and argument string.
+                and argument string.
+
                 "inline": Display the message on the same line as the name and
-                    argument string with a hanging indent if it is too long.
-                "aligned" Display the message on the same line as the name and
-                    argument string with a hanging in dent if it is too long.
-                    Also align the message with all other definitions of the
-                    same style belonging to the same parent item.
+                argument string with a hanging indent if it is too long.
+
+                "aligned": Display the message on the same line as the name and
+                argument string with a hanging in dent if it is too long. Also
+                align the message with all other definitions of the same style
+                belonging to the same parent item.
             formatter: A HelpFormatter object for defining the formatting of
                 the new item. If 'None', it uses the help formatter of its
                 parent item.
 
         Raises:
             ValueError: The given style was not recognized.
+
+        Returns:
+            The new HelpItem object.
         """
         if style == "heading":
             format_func = self._format_heading_def
@@ -222,6 +231,9 @@ class HelpItem:
             formatter: A HelpFormatter object for defining the formatting of
                 the new item. If 'None', it uses the help formatter of its
                 parent item.
+
+        Returns:
+            The new HelpItem object.
         """
         if self.content:
             self._indent()
