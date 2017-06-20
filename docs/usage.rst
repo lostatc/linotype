@@ -17,7 +17,7 @@ simple usage message and print formatted output.
             "")
         return help_root
 
-    print(help_synopsis())
+    print(help_synopsis().format_help())
 
 The help message can be imported into your Sphinx documentation using the
 'linotype' directive. It accepts the following options:
