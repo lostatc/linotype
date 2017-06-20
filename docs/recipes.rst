@@ -3,9 +3,9 @@ Recipes
 Split message into sections
 ---------------------------
 Instead of having your entire help message appear together in your Sphinx
-documentation, you may want to split it up into different sections. This recipe
-shows how you can define different parts of your help message in different
-functions and concatenate them together to be printed.
+documentation, you may want to split it up into different sections. This can be
+accomplished by defining different parts of your help message in different
+functions and concatenating them together to be printed.
 
 .. code-block:: python
     :linenos:
@@ -67,12 +67,13 @@ This is what your Sphinx source file could look like.
         :module: zielen.cli
         :func: help_commands
 
-Make message contextually aware
---------------------------------
-To improve readability, you may want to split your help message into multiple
-different messages that display based on the context. One example would be to
-have a global help message that displays an overview of all subcommands and
-then a more specific help message for each subcommand.
+Hide message details
+--------------------
+To improve readability, you may want to hide certain details in your help
+message under certain circumstances. One example would be to have a global help
+message that displays an overview of all subcommands and then a more specific
+help message for each subcommand. This can be accomplished by limiting the
+number of levels of nested items to descend into.
 
 .. code-block:: python
     :linenos:
