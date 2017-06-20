@@ -136,10 +136,13 @@ class HelpItem:
         if isinstance(other, type(self)):
             for item in other.get_items():
                 item._current_indent += self._formatter.indent_increment
-            for item in other._items:
-                # Exclude the empty root-level item so that formatting only to
-                # a certain depth works as expected.
-                self._items.append(item)
+            if other.type is None:
+                for item in other._items:
+                    # Exclude the empty root-level item so that formatting only to
+                    # a certain depth works as expected.
+                    self._items.append(item)
+            else:
+                self._items.append(other)
             return self
         else:
             raise TypeError(
