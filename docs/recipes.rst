@@ -73,7 +73,8 @@ To improve readability, you may want to hide certain details in your help
 message under certain circumstances. One example would be to have a global help
 message that displays an overview of all subcommands and then a more specific
 help message for each subcommand. This can be accomplished by limiting the
-number of levels of nested items to descend into.
+number of levels of nested items to descend into or by making some items
+invisible via a HelpFormatter class. The first method is shown below.
 
 .. code-block:: python
     :linenos:
