@@ -1,8 +1,15 @@
 Basic Usage
 ===========
-Your help message lives in the code and can be formatted as plain text or
-imported into your Sphinx documentation. This example shows how to create a
-simple usage message and print formatted output.
+Messages in **liotype** consist of a tree of 'items' of which there are
+currently two types, *text* and *definitions*. Every item can contain zero or
+more other items, and every level of nested items increases the indentation
+level. The **HelpItem** class is used to create a root-level item, and it
+accepts a **HelpFormatter** instance which is used to define how items are
+formatted. Every **HelpItem** object has public methods for creating new
+sub-items which in turn return a new **HelpItem** object. Formatter objects can
+be passed in whenever a new item is created, and exising items can be added to
+another item using the '+=' operator. Below is an example that prints a simple
+help message.
 
 .. code-block:: python
     :linenos:
