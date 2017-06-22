@@ -78,7 +78,7 @@ class HelpItem:
     displayed at the order in which they were created. A help message can be
     printed starting at any point in the tree, and the output is
     automatically formatted according to the formatter object passed in.
-    Formatter objects can be passed in whenever a new item in created to
+    Formatter objects can be passed in whenever a new item is created to
     affect its formatting.
 
     New child items can be created using one of the available public
