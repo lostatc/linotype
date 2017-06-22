@@ -73,10 +73,13 @@ class HelpItem:
 
     This class allows for formatting a help message consisting of a tree of
     "items". There are multiple types of items to choose from, and every
-    item can contain zero or more other items. A help message can be printed
-    starting at any point in the tree, and the output is automatically
-    formatted according to the formatter object passed in. Formatter objects
-    can be passed in whenever a new item in created to affect its formatting.
+    item can contain zero or more other items. Each level of nested items
+    increases the indentation level, and items at the same level are
+    displayed at the order in which they were created. A help message can be
+    printed starting at any point in the tree, and the output is
+    automatically formatted according to the formatter object passed in.
+    Formatter objects can be passed in whenever a new item in created to
+    affect its formatting.
 
     New child items can be created using one of the available public
     methods, and new child items can be added using the '+=' operator.
@@ -138,8 +141,8 @@ class HelpItem:
                 item._current_indent += self._formatter.indent_increment
             if other.type is None:
                 for item in other._items:
-                    # Exclude the empty root-level item so that formatting only to
-                    # a certain depth works as expected.
+                    # Exclude the empty root-level item so that formatting only
+                    # to a certain depth works as expected.
                     self._items.append(item)
             else:
                 self._items.append(other)
@@ -311,7 +314,7 @@ class HelpItem:
         return help_msg
 
     def _get_items(
-            self, item: "HelpItem", levels: int, counter=0
+            self, item: "HelpItem", levels=None, counter=0
             ) -> Generator["HelpItem", None, None]:
         """Recursively yield nested items.
 
@@ -351,7 +354,10 @@ class HelpItem:
             The input string with markup for strong text added.
         """
         if self._formatter.auto_markup:
-            return self._formatter.strong[0] + name_string + self._formatter.strong[1]
+            return (
+                self._formatter.strong[0]
+                + name_string
+                + self._formatter.strong[1])
         else:
             return name_string
 
@@ -363,7 +369,8 @@ class HelpItem:
         """
         if self._formatter.auto_markup:
             return ARG_REGEX.sub(
-                self._formatter.em[0] + r"\g<1>" + self._formatter.em[1], args_string)
+                self._formatter.em[0] + r"\g<1>" + self._formatter.em[1],
+                args_string)
         else:
             return args_string
 
