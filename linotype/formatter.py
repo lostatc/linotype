@@ -487,7 +487,7 @@ class HelpItem:
         output_sig = (
             wrapper.initial_indent
             + self._markup_name(output_name[self._current_indent:])
-            + self._markup_args(output_args)[name_buffer:])
+            + self._markup_args(output_args[name_buffer:]))
 
         subsequent_indent = self._formatter.indent_increment
         if aligned:
@@ -495,8 +495,8 @@ class HelpItem:
         wrapper = self._get_wrapper(
             add_initial=-self._current_indent,
             add_subsequent=subsequent_indent)
-        output_msg = " "*sig_buffer + self._sub_args(args, msg)
-        output_msg = wrapper.fill(output_msg)
+        output_msg = wrapper.fill(" "*sig_buffer + msg)
+        output_msg = self._sub_args(args, output_msg)
 
         return output_sig + output_msg[sig_buffer:]
 
