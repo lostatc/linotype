@@ -182,13 +182,13 @@ class HelpItem:
         which can be blank.
 
         Args:
-            name: The command, option, etc. to be defined. If fancy output is
+            name: The command, option, etc. to be defined. If auto markup is
                 enabled, this is strong in the terminal output.
             args: The list of arguments for the thing being defined as a
-                single string. If fancy output is enabled, arguments are
+                single string. If auto markup is enabled, arguments are
                 emphasized in the terminal output.
             msg: A description of the thing being defined, with arguments
-                that appear in the argument string emphasized if fancy output
+                that appear in the argument string emphasized if auto markup
                 is enabled.
             style: The style of definition to use.
 
@@ -198,10 +198,10 @@ class HelpItem:
                 "inline": Display the message on the same line as the name and
                 argument string with a hanging indent if it is too long.
 
-                "aligned": Display the message on the same line as the name and
-                argument string with a hanging in dent if it is too long. Also
-                align the message with all other definitions of the same style
-                belonging to the same parent item.
+                "aligned": Display the message on the same line as the name
+                and argument string with a hanging indent if it is too long.
+                Also align the message with all other definitions of the
+                same style belonging to the same parent item.
             formatter: A HelpFormatter object for defining the formatting of
                 the new item. If 'None', it uses the help formatter of its
                 parent item.
