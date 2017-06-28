@@ -24,7 +24,7 @@ import pytest
 from linotype import HelpFormatter, HelpItem
 
 
-class TestHelpFormatter:
+class TestHelpItem:
     @pytest.fixture
     def formatter(self):
         """Return a new HelpFormatter object.
@@ -50,7 +50,7 @@ class TestHelpFormatter:
             
         assert help_root.format_help() == expected_output
 
-    def test_definition_heading_style_formatting(self, formatter):
+    def test_definition_heading_formatting(self, formatter):
         """The 'heading' style of definition items format properly."""
         help_root = HelpItem(formatter)
         help_root.add_definition(
@@ -62,7 +62,7 @@ class TestHelpFormatter:
 
         assert help_root.format_help() == expected_output
 
-    def test_definition_inline_style_formatting(self, formatter):
+    def test_definition_inline_formatting(self, formatter):
         """The 'inline' style of definition items format properly."""
         help_root = HelpItem(formatter)
         help_root.add_definition(
@@ -74,15 +74,33 @@ class TestHelpFormatter:
 
         assert help_root.format_help() == expected_output
 
-    def test_definition_aligned_style_formatting(self, formatter):
-        """The 'aligned' style of definition items format properly."""
+    def test_definition_heading_aligned_formatting(self, formatter):
+        """The 'heading_aligned' style of definition items format properly."""
         help_root = HelpItem(formatter)
         help_root.add_definition(
             "diff", "[options] number1..number2 [files]",
-            "Compare the snapshots number1 and number2.", style="aligned")
+            "Compare the snapshots number1 and number2.",
+            style="heading_aligned")
         help_root.add_definition(
             "modify", "[options] number",
-            "Modify a snapshot.", style="aligned")
+            "Modify a snapshot.", style="inline_aligned")
+        expected_output = textwrap.dedent("""\
+            diff [options] number1..number2 [files]
+                                     Compare the snapshots number1 and number2.
+            modify [options] number  Modify a snapshot.""")
+
+        assert help_root.format_help() == expected_output
+
+    def test_definition_inline_aligned_formatting(self, formatter):
+        """The 'inline_aligned' style of definition items format properly."""
+        help_root = HelpItem(formatter)
+        help_root.add_definition(
+            "diff", "[options] number1..number2 [files]",
+            "Compare the snapshots number1 and number2.",
+            style="inline_aligned")
+        help_root.add_definition(
+            "modify", "[options] number",
+            "Modify a snapshot.", style="inline_aligned")
         expected_output = textwrap.dedent("""\
             diff [options] number1..number2 [files]  Compare the snapshots number1 and
                                                          number2.

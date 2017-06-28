@@ -19,6 +19,8 @@ along with linotype.  If not, see <http://www.gnu.org/licenses/>.
 """
 import re
 import textwrap
+import functools
+import contextlib
 from typing import Any, Callable, Tuple, Generator
 
 ARG_REGEX = re.compile(r"([\w-]+)")
@@ -195,13 +197,21 @@ class HelpItem:
                 "heading": Display the message on a separate line from the name
                 and argument string.
 
-                "inline": Display the message on the same line as the name and
-                argument string with a hanging indent if it is too long.
+                "heading_aligned": Display the message on a separate line
+                from the name and argument string, and align the message
+                with those of all other definitions that belong to the same
+                parent item and have a style of "inline_aligned". Use a
+                hanging indent if the message is too long.
 
-                "aligned": Display the message on the same line as the name
-                and argument string with a hanging indent if it is too long.
-                Also align the message with all other definitions of the
-                same style belonging to the same parent item.
+                "inline": Display the message on the same line as the name
+                and argument string. Use a hanging indent if the message is
+                too long.
+
+                "inline_aligned": Display the message on the same line as
+                the name and argument string and align the message with
+                those of all other definitions that belong to the same
+                parent item and have the style 'inline_aligned'. Use a
+                hanging indent if the message is too long.
             formatter: A HelpFormatter object for defining the formatting of
                 the new item. If 'None', it uses the help formatter of its
                 parent item.
@@ -213,11 +223,17 @@ class HelpItem:
             The new HelpItem object.
         """
         if style == "heading":
-            format_func = self._format_heading_def
+            format_func = functools.partial(
+                self._format_heading_def, aligned=False)
+        elif style == "heading_aligned":
+            format_func = functools.partial(
+                self._format_heading_def, aligned=True)
         elif style == "inline":
-            format_func = self._format_inline_def
-        elif style == "aligned":
-            format_func = self._format_aligned_def
+            format_func = functools.partial(
+                self._format_inline_def, aligned=False)
+        elif style == "inline_aligned":
+            format_func = functools.partial(
+                self._format_inline_def, aligned=True)
         else:
             raise ValueError(
                 "unrecognized definition style '{}'".format(style))
@@ -241,19 +257,17 @@ class HelpItem:
         Returns:
             The new HelpItem object.
         """
-        if self.content:
-            self._indent()
+        with contextlib.ExitStack() as stack:
+            if self.content:
+                stack.enter_context(self._indent())
 
-        if formatter is None:
-            formatter = self._formatter
+            if formatter is None:
+                formatter = self._formatter
 
-        new_item = self._new_item(
-            item_type, content, format_func, self, self._current_indent,
-            formatter)
-        self._items.append(new_item)
-
-        if self.content:
-            self._dedent()
+            new_item = self._new_item(
+                item_type, content, format_func, self, self._current_indent,
+                formatter)
+            self._items.append(new_item)
 
         return new_item
 
@@ -335,17 +349,12 @@ class HelpItem:
                 yield from self._get_items(
                     item, levels, counter=counter+1)
 
+    @contextlib.contextmanager
     def _indent(self) -> None:
-        """Increase the indentation level."""
+        """Temporarily increase the indentation level."""
         self._current_indent += self._formatter.indent_increment
-
-    def _dedent(self) -> None:
-        """Decrease the indentation level."""
-        new_indent = self._current_indent - self._formatter.indent_increment
-        if new_indent < 0:
-            self._current_indent = 0
-        else:
-            self._current_indent = new_indent
+        yield
+        self._current_indent -= self._formatter.indent_increment
 
     def _markup_name(self, name_string: str) -> str:
         """Make the input string strong.
@@ -418,55 +427,49 @@ class HelpItem:
 
         return wrapper
 
-    @staticmethod
-    def _format_text(self, text: str) -> str:
-        """Format plain text for the help message.
+    def _get_aligned_buffer(self) -> int:
+        """Get the length of the buffer to leave before aligned messages.
 
-        This method accepts the instance of the calling item as its first
-        argument.
-
-        Args:
-            text: The text to be formatted.
+        This value is the length of the longest signature (name + args) of
+        any sibling items that are definitions with the 'inline_aligned'
+        style plus the inline buffer space. If there are none, it is the
+        indentation increment.
 
         Returns:
-            The formatted text as a string.
+            The number of spaces to buffer.
         """
-        wrapper = self._get_wrapper()
-        return wrapper.fill(text)
-
-    @staticmethod
-    def _format_inline_def(
-            self, definition: Tuple[str, str, str], aligned=False) -> str:
-        """Format an inline definition for the help message.
-
-        In an inline definition, the message is printed on the same line as
-        the name and argument string and with a hanging indent as opposed to
-        on a new line.
-
-        This method accepts the instance of the calling item as its first
-        argument.
-
-        Args:
-            definition: A tuple containing the name, args and message for
-                the definition.
-            aligned: Vertically align with all other definitions with the style
-                "aligned" belonging to the same parent item.
-
-        Returns:
-            The formatted definition as a string.
-        """
-        name, args, msg = definition
-        if aligned:
-            inline_content = (
-                item.content for item in self._parent._items
-                if item._format_func == self._format_aligned_def)
+        inline_content = (
+            item.content for item in self._parent._items
+            if item.type == "definition"
+            and item._format_func.func is self._format_inline_def
+            and item._format_func.keywords["aligned"] is True)
+        try:
             longest = max(
                 len(" ".join([string for string in (name, args) if string]))
                 for name, args, msg in inline_content)
-        else:
-            longest = len(
-                " ".join([string for string in (name, args) if string]))
-        sig_buffer = longest + self._formatter.inline_space
+            longest += self._formatter.inline_space
+        except ValueError:
+            # There are no siblings that are definitions with the
+            # 'inline_aligned' style.
+            longest = self._formatter.indent_increment
+
+        return longest
+
+    def _create_sig(self, name: str, args: str, sig_buffer: int) -> str:
+        """Create a signature for a definition.
+
+        A 'signature' is the concatenation of the definition's name and
+        argument string.
+
+        Args:
+            name: The name to be defined.
+            args: The argument string for the definition.
+            sig_buffer: The amount of space there should be between the
+                beginning of the line and the message.
+
+        Returns:
+            The signature string for the definition.
+        """
         name_buffer = len(name)
 
         # Markup must be added after all text formatting has occurred
@@ -489,6 +492,45 @@ class HelpItem:
             + self._markup_name(output_name[self._current_indent:])
             + self._markup_args(output_args[name_buffer:]))
 
+        return output_sig
+
+    @staticmethod
+    def _format_text(self, content: str) -> str:
+        """Format plain text for the help message.
+
+        Args:
+            self: The instance of the calling item.
+            content: The text to be formatted.
+
+        Returns:
+            The formatted text as a string.
+        """
+        wrapper = self._get_wrapper()
+        return wrapper.fill(content)
+
+    @staticmethod
+    def _format_inline_def(
+            self, content: Tuple[str, str, str], aligned: bool) -> str:
+        """Format an 'inline' definition for the help message.
+
+        Args:
+            self: The instance of the calling item.
+            content: A tuple containing the name, args and message for the
+                definition.
+
+        Returns:
+            The formatted definition as a string.
+        """
+        name, args, msg = content
+        if aligned:
+            sig_buffer = self._get_aligned_buffer()
+        else:
+            sig_buffer = (len(
+                " ".join([string for string in (name, args) if string]))
+                + self._formatter.inline_space)
+
+        output_sig = self._create_sig(name, args, sig_buffer)
+
         subsequent_indent = self._formatter.indent_increment
         if aligned:
             subsequent_indent += sig_buffer
@@ -501,70 +543,34 @@ class HelpItem:
         return output_sig + output_msg[sig_buffer:]
 
     @staticmethod
-    def _format_aligned_def(self, definition: Tuple[str, str, str]) -> str:
-        """Format an aligned definition for the help message.
-
-        In an aligned definition, the message is printed on the same line as
-        the name and argument string and with a hanging indent as opposed to
-        on a new line. The definition is vertically aligned with all other
-        definitions of the same style belonging to the parent item.
-
-        This method accepts the instance of the calling item as its first
-        argument.
+    def _format_heading_def(
+            self, content: Tuple[str, str, str], aligned: bool) -> str:
+        """Format a 'heading' definition for the help message.
 
         Args:
-            definition: A tuple containing the name, args and message for
-                the definition.
+            self: The instance of the calling item.
+            content: A tuple containing the name, args and message for the
+                definition.
 
         Returns:
             The formatted definition as a string.
         """
-        return self._format_inline_def(self, definition, aligned=True)
-
-    @staticmethod
-    def _format_heading_def(self, definition: Tuple[str, str, str]) -> str:
-        """Format a heading definition for the help message.
-
-        In a heading definition, the message is printed on a new line as
-        opposed to on the same line as the name and args.
-
-        This method accepts the instance of the calling item as its first
-        argument.
-
-        Args:
-            definition: A tuple containing the name, args and message for
-                the definition.
-
-        Returns:
-            The formatted definition as a string.
-        """
-        name, args, msg = definition
-        name_buffer = len(name)
-
-        # Markup must be added after all text formatting has occurred
-        # because the markup strings should be ignored when wrapping the
-        # text. To allow the formatting to be applied to each part of the
-        # definition separately, spaces are used as filler in certain places
-        # so that the text can be wrapped properly before the real text is
-        # substituted.
-        wrapper = self._get_wrapper(
-            add_initial=-self._formatter.indent_increment)
-        output_args = " "*(name_buffer + 1) + args
-        output_args = wrapper.fill(output_args)
-
-        wrapper = self._get_wrapper()
-        output_name = wrapper.fill(name)
-        output_sig = (
-            wrapper.initial_indent
-            + self._markup_name(output_name[self._current_indent:])
-            + self._markup_args(output_args)[name_buffer:])
+        name, args, msg = content
+        output_sig = self._create_sig(name, args, 0)
 
         if msg:
-            self._indent()
-            wrapper = self._get_wrapper()
-            output_msg = wrapper.fill(msg)
-            output_msg = self._sub_args(args, output_msg)
-            self._dedent()
+            with contextlib.ExitStack() as stack:
+                if aligned:
+                    sig_buffer = self._get_aligned_buffer()
+                    wrapper = self._get_wrapper(
+                        add_initial=sig_buffer,
+                        add_subsequent=(
+                            sig_buffer + self._formatter.indent_increment))
+                else:
+                    stack.enter_context(self._indent())
+                    wrapper = self._get_wrapper()
+                output_msg = wrapper.fill(msg)
+                output_msg = self._sub_args(args, output_msg)
 
             return "\n".join([output_sig, output_msg])
         else:
