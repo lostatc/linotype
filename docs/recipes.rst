@@ -2,10 +2,10 @@ Recipes
 =======
 Split message into sections
 ---------------------------
-Instead of having your entire help message appear together in your Sphinx
-documentation, you may want to split it up into different sections. This can be
-accomplished by defining different parts of your help message in different
-functions and concatenating them together to be printed.
+Instead of having your entire help message appear in one place in your
+**Sphinx** documentation, you may want to split it up into different sections.
+This can be accomplished by defining different parts of your help message in
+different functions and concatenating them together to be printed.
 
 .. code-block:: python
     :linenos:
@@ -39,7 +39,7 @@ functions and concatenating them together to be printed.
 
         print(help_root.format_help())
 
-This is what your Sphinx source file could look like.
+This is what your **Sphinx** source file could look like.
 
 .. code-block:: rst
     :linenos:
