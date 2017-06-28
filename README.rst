@@ -6,16 +6,16 @@ linotype
 
 linotype is a program for generating help messages for your program that are
 formatted automatically. Messages are defined in the code using a simple
-interface and can be printed to the terminal and/or imported into your
-**Sphinx** documentation, which removes the need for duplicate documentation.
-Line wrapping, indentation, alignment and markup are all applied automatically,
+interface and can be printed to the terminal and/or imported into your Sphinx
+documentation, which removes the need for duplicate documentation.  Line
+wrapping, indentation, alignment and markup are all applied automatically,
 making your help message easier to maintain so that you can focus on the
 content.
 
 This program focuses on providing more options for configuring your help
-message than **argparse** in the Python standard library. It gives you full
-control over the structue and formatting and allows you to do many things that
-are impossible with **argparse** alone. See the full documentation below for
-more details.
+message than argparse in the Python standard library. It gives you full control
+over the structue and formatting and allows you to do many things that are
+impossible with argparse alone. See the full documentation below for more
+details.
 
 `Documentation <https://linotype.readthedocs.io/en/latest/index.html>`_

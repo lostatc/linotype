@@ -26,8 +26,10 @@ help message.
 
     print(help_synopsis().format_help())
 
-The help message can be imported into your Sphinx documentation using the
-'linotype' directive. It accepts the following options:
+To use linotype with Sphinx, you must first add 'linotype.ext' to the list of
+Sphinx extensions in the *conf.py* file for your project. The help message can
+be imported into your Sphinx documentation using the 'linotype' directive. It
+accepts the following options:
 
 \:func\:
     The name of the function which returns a HelpItem object.
@@ -44,6 +46,7 @@ The help message can be imported into your Sphinx documentation using the
 
 The options :module: and :filepath: are mutually exclusive.
 
+Here is an example:
 .. code-block:: rst
     :linenos:
 
