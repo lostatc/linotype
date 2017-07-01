@@ -150,16 +150,21 @@ class LinotypeDirective(Directive):
         if item.type is None:
             node = nodes.definition_list()
         elif item.type == "text":
-            node = nodes.paragraph(text=item.content)
+            # Add a definition node after the paragraph node to act as a
+            # starting point for new sub-nodes.
+            node = [
+                nodes.paragraph(text=item.content),
+                nodes.definition_list_item(
+                    "", nodes.term(), nodes.definition())]
         elif item.type == "definition":
             name, args, msg = item.content
-            node = nodes.definition_list_item(
+            node = [nodes.definition_list_item(
                     "", nodes.term(
                         "", "", self._markup_name(name), nodes.Text(" "),
                         *self._markup_args(args)),
                     nodes.definition(
                         "", nodes.paragraph(
-                            "", "", *self._sub_args(args, msg))))
+                            "", "", *self._sub_args(args, msg))))]
         else:
             raise ValueError("unrecognized item type '{0}'".format(item.type))
 
@@ -192,8 +197,16 @@ class LinotypeDirective(Directive):
             if item.current_level > current_level:
                 # The indentation level increased.
                 ancestor_nodes.append(parent_node)
-                parent_node = nodes.block_quote()
-                ancestor_nodes[-1] += parent_node
+
+                # Set the parent node equal to the second node (the
+                # definition) in the last definition_list_item belonging to
+                # the current parent node.
+                parent_node = parent_node[-1][1]
+
+                # Append a new definition_list to the current parent node
+                # and set the parent node equal to it.
+                parent_node += nodes.definition_list()
+                parent_node = parent_node[-1]
 
             elif item.current_level < current_level:
                 # The indentation level decreased.
