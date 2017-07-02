@@ -200,11 +200,17 @@ class LinotypeDirective(Directive):
                 # The indentation level increased.
                 ancestor_nodes.append(parent_node)
 
-                # Set the parent node equal to the second node (the
-                # definition) in the last definition_list_item belonging to
-                # the current parent node.
+                # Set the parent node equal to the first definition in the
+                # last definition_list_item belonging to the current parent
+                # node.
                 if parent_node.children:
-                    parent_node = parent_node[-1][1]
+                    def_list_index = (
+                        parent_node.first_child_matching_class(
+                            nodes.definition_list_item, start=-1, end=0))
+                    def_list = parent_node[def_list_index]
+                    def_index = def_list.first_child_matching_class(
+                        nodes.definition)
+                    parent_node = parent_node[def_list_index][def_index]
 
                 # Append a new definition_list to the current parent node
                 # and set the parent node equal to it.
