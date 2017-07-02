@@ -197,23 +197,24 @@ class HelpItem:
             msg: A description of the thing being defined, with arguments
                 that appear in the argument string emphasized if auto markup
                 is enabled.
-            style: The style of definition to use.
+            style: The style of definition to use. Each style has a long name
+                and a short name, either of which can be used.
 
-                "heading": Display the message on a separate line from the name
-                and argument string.
+                "heading", "he": Display the message on a separate line from
+                the name and argument string.
 
-                "heading_aligned": Display the message on a separate line
-                from the name and argument string and align the message with
-                those of all other definitions that belong to the same
+                "heading_aligned", "ha": Display the message on a separate
+                line from the name and argument string and align the message
+                with those of all other definitions that belong to the same
                 parent item and have a style of "inline_aligned". Use a
                 hanging indent if the message is too long.
 
-                "inline": Display the message on the same line as the name
-                and argument string. Use a hanging indent if the message is
-                too long.
+                "inline", "in": Display the message on the same line as the
+                name and argument string. Use a hanging indent if the
+                message is too long.
 
-                "inline_aligned": Display the message on the same line as
-                the name and argument string and align the message with
+                "inline_aligned", "ia": Display the message on the same line
+                as the name and argument string and align the message with
                 those of all other definitions that belong to the same
                 parent item and have the style 'inline_aligned'. Use a
                 hanging indent if the message is too long.
@@ -229,16 +230,16 @@ class HelpItem:
         Returns:
             The new HelpItem object.
         """
-        if style == "heading":
+        if style in ["heading", "he"]:
             format_func = functools.partial(
                 self._format_heading_def, aligned=False)
-        elif style == "heading_aligned":
+        elif style in ["heading_aligned", "ha"]:
             format_func = functools.partial(
                 self._format_heading_def, aligned=True)
-        elif style == "inline":
+        elif style in ["inline", "in"]:
             format_func = functools.partial(
                 self._format_inline_def, aligned=False)
-        elif style == "inline_aligned":
+        elif style in ["inline_aligned", "ia"]:
             format_func = functools.partial(
                 self._format_inline_def, aligned=True)
         else:
