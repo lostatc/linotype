@@ -6,25 +6,24 @@ more other items, and every level of nested items increases the indentation
 level. The **HelpItem** class is used to create a root-level item, and it
 accepts a **HelpFormatter** instance which is used to define how items are
 formatted. Every **HelpItem** object has public methods for creating new
-sub-items which in turn return a new **HelpItem** object. Formatter objects can
-be passed in whenever a new item is created, and exising items can be added to
-another item using the '+=' operator. Below is an example that prints a simple
-help message.
+sub-items which in turn return a new **HelpItem** object. Below is an example
+that prints a simple help message.
 
 .. code-block:: python
     :linenos:
 
     from linotype import HelpFormatter, HelpItem
 
-    def help_synopsis():
+    def help_message():
         formatter = HelpFormatter()
         help_root = HelpItem(formatter)
-        help_root.add_definition(
+        usage = help_root.add_text("Usage:")
+        usage.add_definition(
             "zielen", "[global_options] command [command_options] [command_args]",
             "")
         return help_root
 
-    print(help_synopsis().format_help())
+    print(help_message().format_help())
 
 To use **linotype** with **Sphinx**, you must first add 'linotype.ext' to the
 list of **Sphinx** extensions in the *conf.py* file for your project. The help
@@ -40,19 +39,27 @@ directive. It accepts the following options:
 \:filepath\:
     The path of the python file containing the function.
 
+\:item_id\:
+    The ID of an item in the tree returned by the function. The output is
+    restricted to just this item and its children.
+
+\:children\:
+    Display the item's children but not the item itself.
+
 \:no_auto_markup\:
     Do not automatically apply **bold** and *emphasized* formatting to the
     output.
 
-The options :module: and :filepath: are mutually exclusive.
+The options :module: and :filepath: are mutually exclusive. The options :func:
+and either :module: or :filepath: are required.
 
-Here is an example:
+Here is an example of a **Sphinx** source file using the directive:
 
 .. code-block:: rst
     :linenos:
 
-    Usage
-    =====
+    SYNOPSIS
+    ========
     .. linotype::
         :module: zielen.cli
-        :func: help_synopsis
+        :func: help_message

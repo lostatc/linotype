@@ -21,7 +21,7 @@ import re
 import textwrap
 import functools
 import contextlib
-from typing import Any, Callable, Tuple, Generator
+from typing import Any, Callable, Tuple, Generator, Optional
 
 ARG_REGEX = re.compile(r"([\w-]+)")
 
@@ -90,24 +90,26 @@ class HelpItem:
         formatter: The formatter object for the item tree.
 
     Attributes:
-        type: The type of item that the current item it.
+        type: The type of the current item.
         content: The content to display in the help message.
+        id: The item ID.
+        current_level: The current indentation level.
         _format_func: The function used to format the current content.
         _parent: The parent item object.
         _current_indent: The number of spaces that the item is currently
             indented.
         _formatter: The formatter object for the item tree.
-        current_level: The current indentation level.
-        _items: A list of HelpItem objects in the help message.
+        _children: A list of HelpItem objects in the help message.
     """
     def __init__(self, formatter: HelpFormatter) -> None:
         self.type = None
         self.content = None
+        self.id = None
         self._format_func = None
         self._parent = None
         self._current_indent = 0
         self._formatter = formatter
-        self._items = []
+        self._children = []
 
     @property
     def current_level(self) -> int:
@@ -116,13 +118,14 @@ class HelpItem:
 
     @classmethod
     def _new_item(
-            cls, item_type: str, content: Any, format_func: Callable,
-            parent: "HelpItem", starting_indent: int, formatter: HelpFormatter
-            ) -> "HelpItem":
+            cls, item_type: str, content: Any, item_id: Optional[str],
+            format_func: Callable, parent: "HelpItem", starting_indent: int,
+            formatter: HelpFormatter) -> "HelpItem":
         """Construct a new item."""
         new_item = cls(formatter)
-        new_item.content = content
         new_item.type = item_type
+        new_item.content = content
+        new_item.id = item_id
         new_item._format_func = format_func
         new_item._parent = parent
         new_item._current_indent = starting_indent
@@ -142,12 +145,12 @@ class HelpItem:
             for item in other.get_items():
                 item._current_indent += self._formatter.indent_increment
             if other.type is None:
-                for item in other._items:
+                for item in other._children:
                     # Exclude the empty root-level item so that formatting only
                     # to a certain depth works as expected.
-                    self._items.append(item)
+                    self._children.append(item)
             else:
-                self._items.append(other)
+                self._children.append(other)
             return self
         else:
             raise TypeError(
@@ -157,7 +160,7 @@ class HelpItem:
     # Message building methods
     # ========================
 
-    def add_text(self, text: str, formatter=None) -> "HelpItem":
+    def add_text(self, text: str, formatter=None, item_id=None) -> "HelpItem":
         """Add a text item to be printed.
 
         This item displays the given text wrapped to the given width.
@@ -165,23 +168,25 @@ class HelpItem:
         Args:
             text: The text to be printed.
             formatter: A HelpFormatter object for defining the formatting of
-                the new item. If 'None', it uses the help formatter of its
+                the new item. If 'None,' it uses the help formatter of its
                 parent item.
+            item_id: A unique ID for the item that can be referenced in the
+                Sphinx documentation.
 
         Returns:
             The new HelpItem object.
         """
         return self._add_item(
-            "text", text, self._format_text, formatter=formatter)
+            "text", text, item_id, self._format_text, formatter=formatter)
 
     def add_definition(
             self, name: str, args: str, msg: str, style="heading",
-            formatter=None) -> "HelpItem":
+            formatter=None, item_id=None) -> "HelpItem":
         """Add a definition to be printed.
 
-        This item displays a formatted definition in one of two styles.
-        Definitions consist of a name, an argument string and a message, any of
-        which can be blank.
+        This item displays a formatted definition in one of multiple styles.
+        Definitions consist of a name, an argument string and a message,
+        any of which can be blank.
 
         Args:
             name: The command, option, etc. to be defined. If auto markup is
@@ -198,8 +203,8 @@ class HelpItem:
                 and argument string.
 
                 "heading_aligned": Display the message on a separate line
-                from the name and argument string, and align the message
-                with those of all other definitions that belong to the same
+                from the name and argument string and align the message with
+                those of all other definitions that belong to the same
                 parent item and have a style of "inline_aligned". Use a
                 hanging indent if the message is too long.
 
@@ -213,8 +218,10 @@ class HelpItem:
                 parent item and have the style 'inline_aligned'. Use a
                 hanging indent if the message is too long.
             formatter: A HelpFormatter object for defining the formatting of
-                the new item. If 'None', it uses the help formatter of its
+                the new item. If 'None,' it uses the help formatter of its
                 parent item.
+            item_id: A unique ID for the item that can be referenced in the
+                Sphinx documentation.
 
         Raises:
             ValueError: The given style was not recognized.
@@ -239,24 +246,36 @@ class HelpItem:
                 "unrecognized definition style '{}'".format(style))
 
         return self._add_item(
-            "definition", (name, args, msg), format_func, formatter=formatter)
+            "definition", (name, args, msg), item_id, format_func,
+            formatter=formatter)
 
     def _add_item(
-            self, item_type: str, content: Any, format_func: Callable,
-            formatter=None) -> "HelpItem":
+            self, item_type: str, content: Any, item_id: Optional[str],
+            format_func: Callable, formatter: Optional[HelpFormatter]
+            ) -> "HelpItem":
         """Add a new item under the current item.
 
         Args:
             item_type: The type of item that the current item is.
             content: The content to print.
+            item_id: A unique ID for the item that can be referenced in the
+                Sphinx documentation.
             format_func: The function used to format the content.
             formatter: A HelpFormatter object for defining the formatting of
-                the new item. If 'None', it uses the help formatter of its
+                the new item. If 'None,' it uses the help formatter of its
                 parent item.
+
+        Raises:
+            ValueError: The given item ID is already in use.
 
         Returns:
             The new HelpItem object.
         """
+        if item_id is not None and self._get_item_by_id(
+                item_id, start_at_root=True):
+            raise ValueError(
+                "The item ID '{0}' is already in use".format(item_id))
+
         with contextlib.ExitStack() as stack:
             if self.content:
                 stack.enter_context(self._indent())
@@ -265,33 +284,40 @@ class HelpItem:
                 formatter = self._formatter
 
             new_item = self._new_item(
-                item_type, content, format_func, self, self._current_indent,
-                formatter)
-            self._items.append(new_item)
+                item_type, content, item_id, format_func, self,
+                self._current_indent, formatter)
+            self._children.append(new_item)
 
         return new_item
 
     # Message formatting methods
     # ==========================
 
-    def format_help(self, levels=None) -> str:
+    def format_help(self, levels=None, item_id=None) -> str:
         """Join the help messages of each item.
 
-        This method will return the help messages from all items under the
-        current item in the tree. Whether or not the current item has
-        parents, it will be left-aligned in the output and wrapped
-        accordingly.
+        This method will return the help messages from all descendants of
+        the root item as determined by the 'item_id' argument. Whether or
+        not the root item has parents, the output will be left-aligned and
+        wrapped accordingly.
 
         Args:
             levels: The number of levels of nested items to descend into.
+            item_id: The ID of the root item. If 'None,' this defaults to the
+                current item.
 
         Returns:
             The joined help message as a string.
         """
         # Dedent the output so that it's flush with the left edge.
-        dedent_amount = self._current_indent
+        if item_id is None:
+            target_item = self
+        else:
+            target_item = self._get_item_by_id(item_id)
+
+        dedent_amount = target_item._current_indent
         help_messages = []
-        for item in self.get_items(levels=levels):
+        for item in self.get_items(levels=levels, item_id=item_id):
             item._current_indent -= dedent_amount
             if item.content is not None:
                 help_messages.append(item._format_item())
@@ -299,17 +325,26 @@ class HelpItem:
         return "\n".join([
             message for message in help_messages if message is not None])
 
-    def get_items(self, levels=None) -> Generator["HelpItem", None, None]:
+    def get_items(
+            self, levels=None, item_id=None
+            ) -> Generator["HelpItem", None, None]:
         """Recursively yield nested items.
 
         Args:
             levels: The number of levels of nested items to descend into.
                 'None' means that there is no limit.
+            item_id: The ID of the root item. If 'None,' this defaults to the
+                current item.
 
         Yields:
-            Each item in the tree.
+            The root item and all of its descendants.
         """
-        yield from self._get_items(self, levels)
+        if item_id is None:
+            target_item = self
+        else:
+            target_item = self._get_item_by_id(item_id)
+
+        yield from self._depth_search(target_item, levels=levels)
 
     def _format_item(self) -> str:
         """Format the items belonging to this item.
@@ -327,13 +362,13 @@ class HelpItem:
 
         return help_msg
 
-    def _get_items(
+    def _depth_search(
             self, item: "HelpItem", levels=None, counter=0
             ) -> Generator["HelpItem", None, None]:
         """Recursively yield nested items.
 
         Args:
-            item: The item to find descendants of. If 'None', this defaults to
+            item: The item to find descendants of. If 'None,' this defaults to
                 self.
             levels: The number of levels of nested items to descend into.
                 'None' means that there is no limit.
@@ -345,9 +380,44 @@ class HelpItem:
         yield item
 
         if levels is None or counter < levels:
-            for item in item._items:
-                yield from self._get_items(
+            for item in item._children:
+                yield from self._depth_search(
                     item, levels, counter=counter+1)
+
+    def _get_item_by_id(self, item_id: str, start_at_root=False) -> "HelpItem":
+        """Get an item by its ID.
+
+        Args:
+            item_id: The ID of the item to get.
+            start_at_root: Begin searching at the root of the current item tree
+                instead of at the current item.
+
+        Returns:
+            An item corresponding to the ID.
+        """
+        if start_at_root:
+            root = self._get_root_item()
+        else:
+            root = self
+
+        for item in self._depth_search(root):
+            if item.id is not None and item.id == item_id:
+                return item
+
+    def _get_root_item(self) -> "HelpItem":
+        """Get the root item in the item tree.
+
+        Returns:
+            The root item in the tree.
+        """
+        if not self._parent:
+            return self
+
+        parent = self._parent
+        while parent._parent:
+            parent = parent._parent
+
+        return parent
 
     @contextlib.contextmanager
     def _indent(self) -> None:
@@ -439,7 +509,7 @@ class HelpItem:
             The number of spaces to buffer.
         """
         inline_content = (
-            item.content for item in self._parent._items
+            item.content for item in self._parent._children
             if item.type == "definition"
             and item._format_func.func is self._format_inline_def
             and item._format_func.keywords["aligned"] is True)

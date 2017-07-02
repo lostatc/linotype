@@ -137,7 +137,7 @@ class TestHelpItem:
         assert help_root.format_help() == expected_output
 
     def test_nested_items_limit(self, formatter):
-        """Limiting the number of levels of nested items to display works."""
+        """The number of levels of nested items to display can be limited."""
         help_root = HelpItem(formatter)
         first_level = help_root.add_text("This is the first level of text.")
         first_level.add_text("This is the second level of text.")
@@ -146,6 +146,7 @@ class TestHelpItem:
         assert help_root.format_help(levels=1) == expected_output
 
     def test_change_indent_increment(self, formatter):
+        """Changes to the indentation are reflected in the output."""
         formatter.indent_increment = 2
         help_root = HelpItem(formatter)
         first_level = help_root.add_text("This is the first level of text.")
@@ -157,6 +158,7 @@ class TestHelpItem:
         assert help_root.format_help() == expected_output
 
     def test_change_width(self, formatter):
+        """Changes to the text width are reflected in the output."""
         formatter.width = 99
         help_root = HelpItem(formatter)
         help_root.add_text(
@@ -178,6 +180,7 @@ class TestHelpItem:
         assert help_root.format_help() == ""
 
     def test_change_inline_space(self, formatter):
+        """Changes to the inline spacing are reflected in the output."""
         formatter.inline_space = 4
         help_root = HelpItem(formatter)
         help_root.add_definition(
@@ -188,3 +191,10 @@ class TestHelpItem:
                 number2.""")
 
         assert help_root.format_help() == expected_output
+
+    def test_duplicate_ids(self, formatter):
+        """Adding items with duplicate item IDs raises an exception."""
+        help_root = HelpItem(formatter)
+        help_root.add_text("foo", item_id="duplicate")
+        with pytest.raises(ValueError):
+            help_root.add_text("bar", item_id="duplicate")

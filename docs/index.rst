@@ -12,7 +12,7 @@ linotype documentation
 
    api
    usage
-   recipes
+   examples
 
 Indices and tables
 ==================

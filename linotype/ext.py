@@ -40,6 +40,8 @@ class LinotypeDirective(Directive):
         "module": unchanged,
         "filepath": unchanged,
         "func": unchanged,
+        "item_id": unchanged,
+        "children": flag,
         "no_auto_markup": flag}
 
     def _get_help_item(self) -> HelpItem:
@@ -135,7 +137,7 @@ class LinotypeDirective(Directive):
 
             return output_nodes
 
-    def _parse_item(self, item: HelpItem) -> nodes.Node:
+    def _parse_item(self, item: HelpItem) -> List[nodes.Node]:
         """Convert a HelpItem object to a docutils Node object.
 
         Args:
@@ -147,9 +149,7 @@ class LinotypeDirective(Directive):
         Returns:
             A Node object.
         """
-        if item.type is None:
-            node = nodes.definition_list()
-        elif item.type == "text":
+        if item.type == "text":
             # Add a definition node after the paragraph node to act as a
             # starting point for new sub-nodes.
             node = [
@@ -180,10 +180,9 @@ class LinotypeDirective(Directive):
         Returns:
             The root Node object of the tree.
         """
-        if help_item.type is None:
-            root_node = self._parse_item(help_item)
-        else:
-            root_node = nodes.definition_list()
+        root_node = nodes.definition_list()
+        if help_item.type is not None:
+            root_node += self._parse_item(help_item)
 
         # This keeps track of the current indentation level by maintaining a
         # queue with the current parent node on the right and all of its
@@ -194,6 +193,9 @@ class LinotypeDirective(Directive):
         current_level = 0
 
         for item in help_item.get_items():
+            if item is help_item:
+                continue
+
             if item.current_level > current_level:
                 # The indentation level increased.
                 ancestor_nodes.append(parent_node)
@@ -201,7 +203,8 @@ class LinotypeDirective(Directive):
                 # Set the parent node equal to the second node (the
                 # definition) in the last definition_list_item belonging to
                 # the current parent node.
-                parent_node = parent_node[-1][1]
+                if parent_node.children:
+                    parent_node = parent_node[-1][1]
 
                 # Append a new definition_list to the current parent node
                 # and set the parent node equal to it.
@@ -226,6 +229,14 @@ class LinotypeDirective(Directive):
             A list of Node objects.
         """
         help_item = self._get_help_item()
+        if "item_id" in self.options:
+            for item in help_item.get_items():
+                if item.id and item.id == self.options["item_id"]:
+                    help_item = item
+                    break
+        if "children" in self.options:
+            help_item.type = None
+            help_item.content = None
         return [self._parse_tree(help_item)]
 
 
