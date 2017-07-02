@@ -229,14 +229,18 @@ class LinotypeDirective(Directive):
             A list of Node objects.
         """
         help_item = self._get_help_item()
+
         if "item_id" in self.options:
-            for item in help_item.get_items():
-                if item.id and item.id == self.options["item_id"]:
-                    help_item = item
-                    break
+            help_item = help_item.get_item_by_id(self.options["item_id"])
+            if help_item is None:
+                raise ValueError(
+                    "an item with the ID '{0}' does not exist".format(
+                        self.options["item_id"]))
+
         if "children" in self.options:
             help_item.type = None
             help_item.content = None
+
         return [self._parse_tree(help_item)]
 
 

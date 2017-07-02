@@ -272,7 +272,7 @@ class HelpItem:
         Returns:
             The new HelpItem object.
         """
-        if item_id is not None and self._get_item_by_id(
+        if item_id is not None and self.get_item_by_id(
                 item_id, start_at_root=True):
             raise ValueError(
                 "The item ID '{0}' is already in use".format(item_id))
@@ -314,7 +314,7 @@ class HelpItem:
         if item_id is None:
             target_item = self
         else:
-            target_item = self._get_item_by_id(item_id)
+            target_item = self.get_item_by_id(item_id)
 
         dedent_amount = target_item._current_indent
         help_messages = []
@@ -343,7 +343,7 @@ class HelpItem:
         if item_id is None:
             target_item = self
         else:
-            target_item = self._get_item_by_id(item_id)
+            target_item = self.get_item_by_id(item_id)
 
         yield from self._depth_search(target_item, levels=levels)
 
@@ -385,7 +385,7 @@ class HelpItem:
                 yield from self._depth_search(
                     item, levels, counter=counter+1)
 
-    def _get_item_by_id(self, item_id: str, start_at_root=False) -> "HelpItem":
+    def get_item_by_id(self, item_id: str, start_at_root=False) -> "HelpItem":
         """Get an item by its ID.
 
         Args:
