@@ -21,7 +21,7 @@ import os
 import re
 import importlib
 import collections
-from typing import List
+from typing import List, Dict, Tuple
 
 from docutils import nodes
 from docutils.parsers.rst import Directive
@@ -29,6 +29,74 @@ from docutils.parsers.rst.directives import unchanged, flag
 
 from linotype.formatter import ARG_REGEX
 from linotype.formatter import HelpItem
+
+
+def _parse_definition_list(
+        def_list_node: nodes.definition_list) -> Dict[str, Tuple[str, str]]:
+    """Parse a definition list inside the directive.
+
+    Args:
+        def_list_node: A definition list node containing definitions for
+            extending the Sphinx output.
+
+    Returns:
+        A dict where keys are item IDs and values are tuples containing
+        the classifier and the content as text.
+    """
+    definitions = {}
+    for node in def_list_node:
+        if not isinstance(node, nodes.definition_list_item):
+            continue
+
+        term_index = node.first_child_matching_class(nodes.term)
+        term = node[term_index].astext()
+
+        classifier_index = node.first_child_matching_class(nodes.classifier)
+        if classifier_index:
+            classifier = node[classifier_index].astext()
+        else:
+            classifier = "@after"
+        if classifier not in ["@replace", "@before", "@after"]:
+            raise ValueError("unknown classifier '{0}'".format(classifier))
+
+        content_index = node.first_child_matching_class(nodes.definition)
+        content = node[content_index].astext()
+
+        definitions[term] = (classifier, content)
+
+    return definitions
+
+
+def _extend_item_content(
+        definitions: Dict[str, Tuple[str, str]], help_item: HelpItem
+        ) -> None:
+    """Modify the content of the item tree based on the definitions provided.
+    
+    Args:
+        definitions: A dict where keys are item IDs and values are tuples
+            containing the classifier and the content as text.
+        help_item: The HelpItem object to be modified in-place.
+    """
+    for term, (classifier, new_content) in definitions.items():
+        item = help_item.get_item_by_id(term, raising=True)
+        if item.type == "text":
+            existing_content = item.content
+        elif item.type == "definition":
+            existing_content = item.content[2]
+        else:
+            continue
+
+        if classifier == "@replace":
+            revised_content = new_content
+        elif classifier == "@before":
+            revised_content = " ".join([new_content, existing_content])
+        elif classifier == "@after":
+            revised_content = " ".join([existing_content, new_content])
+
+        if item.type == "text":
+            item.content = revised_content
+        elif item.type == "definition":
+            item.content[2] = revised_content
 
 
 class LinotypeDirective(Directive):
@@ -237,15 +305,21 @@ class LinotypeDirective(Directive):
         help_item = self._get_help_item()
 
         if "item_id" in self.options:
-            help_item = help_item.get_item_by_id(self.options["item_id"])
-            if help_item is None:
-                raise ValueError(
-                    "an item with the ID '{0}' does not exist".format(
-                        self.options["item_id"]))
+            help_item = help_item.get_item_by_id(
+                self.options["item_id"], raising=True)
 
         if "children" in self.options:
             help_item.type = None
             help_item.content = None
+
+        # Parse directive and extend item content.
+        nested_nodes = nodes.paragraph()
+        self.state.nested_parse(
+            self.content, self.content_offset, nested_nodes)
+        def_list_index = nested_nodes.first_child_matching_class(
+            nodes.definition_list)
+        definitions = _parse_definition_list(nested_nodes[def_list_index])
+        _extend_item_content(definitions, help_item)
 
         return [self._parse_tree(help_item)]
 

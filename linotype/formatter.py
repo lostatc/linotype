@@ -111,11 +111,6 @@ class HelpItem:
         self._formatter = formatter
         self._children = []
 
-    @property
-    def current_level(self) -> int:
-        """The current indentation level."""
-        return int(self._current_indent / self._formatter.indent_increment)
-
     @classmethod
     def _new_item(
             cls, item_type: str, content: Any, item_id: Optional[str],
@@ -156,6 +151,11 @@ class HelpItem:
             raise TypeError(
                 "unsupported operand type(s) for +=: '{0}' and '{1}'".format(
                     type(self), type(other)))
+
+    @property
+    def current_level(self) -> int:
+        """The current indentation level."""
+        return int(self._current_indent / self._formatter.indent_increment)
 
     # Message building methods
     # ========================
@@ -247,7 +247,7 @@ class HelpItem:
                 "unrecognized definition style '{}'".format(style))
 
         return self._add_item(
-            "definition", (name, args, msg), item_id, format_func,
+            "definition", [name, args, msg], item_id, format_func,
             formatter=formatter)
 
     def _add_item(
@@ -385,13 +385,16 @@ class HelpItem:
                 yield from self._depth_search(
                     item, levels, counter=counter+1)
 
-    def get_item_by_id(self, item_id: str, start_at_root=False) -> "HelpItem":
+    def get_item_by_id(
+            self, item_id: str, start_at_root=False, raising=False
+            ) -> "HelpItem":
         """Get an item by its ID.
 
         Args:
             item_id: The ID of the item to get.
             start_at_root: Begin searching at the root of the current item tree
                 instead of at the current item.
+            raising: Raise an exception if an item is not found.
 
         Returns:
             An item corresponding to the ID.
@@ -404,6 +407,10 @@ class HelpItem:
         for item in self._depth_search(root):
             if item.id is not None and item.id == item_id:
                 return item
+
+        if raising:
+            raise ValueError(
+                "an item with the ID '{0}' does not exist".format(item_id))
 
     def _get_root_item(self) -> "HelpItem":
         """Get the root item in the item tree.

@@ -1,12 +1,13 @@
-Basic Usage
-===========
+Usage
+=====
 Messages in **liotype** consist of a tree of 'items' of which there are
 currently two types, *text* and *definitions*. Every item can contain zero or
 more other items, and every level of nested items increases the indentation
 level. The **HelpItem** class is used to create a root-level item, and it
 accepts a **HelpFormatter** instance which is used to define how items are
 formatted. Every **HelpItem** object has public methods for creating new
-sub-items which in turn return a new **HelpItem** object. Below is an example
+sub-items which in turn return a new **HelpItem** object. Items can be assigned
+IDs that can be referenced in the **Sphinx** documentation. Below is an example
 that prints a simple help message.
 
 .. code-block:: python
@@ -63,3 +64,39 @@ Here is an example of a **Sphinx** source file using the directive:
     .. linotype::
         :module: zielen.cli
         :func: help_message
+
+Using the 'linotype' directive, you can extend or replace parts of your help
+message. This allows you to add new content that appears in your **Sphinx**
+documentation but not in your printed output. This is done on a per-item basis
+using a reStructuredText definition list, where the term is the ID of an item
+and the definition is the new text to use. reST markup in the new text is not
+parsed. You can also add a classifier, which changes how the new text is
+incorporated:
+
+@before
+    Insert the new text before the existing text.
+
+@after
+    Insert the new text after the existing text. This is the default.
+
+@replace
+    Replace the existing text with the new text.
+
+Here is an example:
+
+.. code-block:: rst
+    :linenos:
+
+    COMMANDS
+    ========
+    .. linotype::
+        :module: zielen.cli
+        :func: help_message
+
+        initialize
+            This text is inserted after the existing text for the item with the
+            ID 'initialize.'
+
+        sync : @replace
+            This text replaces the existing text for the item with the ID
+            'sync.'
