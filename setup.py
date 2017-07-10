@@ -10,4 +10,5 @@ setup(
     license="GPLv3",
     install_requires=["Sphinx"],
     python_requires=">=3.5",
+    tests_require=["pytest"],
     packages=["linotype"])
