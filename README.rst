@@ -14,8 +14,13 @@ content.
 
 This program focuses on providing more options for configuring your help
 message than **argparse** in the Python standard library. It gives you full
-control over the structue and formatting and allows you to do many things that
+control over the structure and formatting and allows you to do many things that
 are impossible with **argparse** alone. See the full documentation below for
 more details.
 
 `Documentation <https://linotype.readthedocs.io/en/latest/index.html>`_
+
+See Also
+--------
+`sphinx-argparse <https://github.com/ribozz/sphinx-argparse>`_
+
