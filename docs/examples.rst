@@ -66,7 +66,7 @@ This can be accomplished using item IDs.
             "zielen", "[global_options] command [command_options] [command_args]",
             "")
 
-        global_opts = help_root.add_text("Global Options:", item_id="global_opts")
+        global_opts = help_root.add_text("Global Options:", item_id="global")
         global_opts.add_definition(
             "--help", "",
             "Print a usage message and exit.")
@@ -101,7 +101,7 @@ This is what your **Sphinx** source file could look like:
     .. linotype::
         :module: zielen.cli
         :func: help_message
-        :item_id: global_opts
+        :item_id: global
         :children:
 
 Hide message details

@@ -7,8 +7,8 @@ level. The **HelpItem** class is used to create a root-level item, and it
 accepts a **HelpFormatter** instance which is used to define how items are
 formatted. Every **HelpItem** object has public methods for creating new
 sub-items which in turn return a new **HelpItem** object. Items can be assigned
-IDs that can be referenced in the **Sphinx** documentation. Below is an example
-that prints a simple help message.
+IDs that can be referenced in the **Sphinx** documentation. Here is an example
+that prints a simple help message:
 
 .. code-block:: python
     :linenos:
@@ -27,9 +27,14 @@ that prints a simple help message.
     print(help_message().format_help())
 
 To use **linotype** with **Sphinx**, you must first add 'linotype.ext' to the
-list of **Sphinx** extensions in the *conf.py* file for your project. The help
-message can be imported into your **Sphinx** documentation using the 'linotype'
-directive. It accepts the following options:
+list of **Sphinx** extensions in the *conf.py* file for your project:
+
+.. code-block:: python
+
+    extensions = ["linotype.ext"]
+
+The help message can be imported into your **Sphinx** documentation using the
+'linotype' directive. It accepts the following options:
 
 \:func\:
     The name of the function which returns a HelpItem object.
@@ -48,22 +53,11 @@ directive. It accepts the following options:
     Display the item's children but not the item itself.
 
 \:no_auto_markup\:
-    Do not automatically apply **bold** and *emphasized* formatting to the
+    Do not automatically apply **strong** and *emphasized* formatting to the
     output.
 
 The options :module: and :filepath: are mutually exclusive. The options :func:
 and either :module: or :filepath: are required.
-
-Here is an example of a **Sphinx** source file using the directive:
-
-.. code-block:: rst
-    :linenos:
-
-    SYNOPSIS
-    ========
-    .. linotype::
-        :module: zielen.cli
-        :func: help_message
 
 Using the 'linotype' directive, you can extend or replace parts of your help
 message. This allows you to add new content that appears in your **Sphinx**
@@ -82,13 +76,11 @@ incorporated:
 @replace
     Replace the existing text with the new text.
 
-Here is an example:
+Here is an example of a **Sphinx** source file using the directive:
 
 .. code-block:: rst
     :linenos:
 
-    COMMANDS
-    ========
     .. linotype::
         :module: zielen.cli
         :func: help_message

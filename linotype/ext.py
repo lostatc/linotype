@@ -39,6 +39,9 @@ def _parse_definition_list(
         def_list_node: A definition list node containing definitions for
             extending the Sphinx output.
 
+    Raises:
+        ValueError: The given classifier was unrecognized.
+
     Returns:
         A dict where keys are item IDs and values are tuples containing
         the classifier and the content as text.
