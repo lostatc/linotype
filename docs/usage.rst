@@ -36,9 +36,6 @@ reStructuredText syntax::
     This text is **strong**.
     This text is *emphasized*.
 
-In cases where manual markup overlaps automatic markup, the manual markup is
-ignored.
-
 ----
 
 To use **linotype** with **Sphinx**, you must first add 'linotype.ext' to the

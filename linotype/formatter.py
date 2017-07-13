@@ -448,35 +448,39 @@ class HelpItem:
         yield
         self._current_indent -= self._formatter.indent_increment
 
-    def _markup_name(self, name_string: str) -> str:
-        """Make the input string strong.
+    @staticmethod
+    def _parse_name_markup(name_string: str) -> Tuple[str, MarkupPositions]:
+        """Get the position of markup for the definition name.
 
         Returns:
-            The input string with markup for strong text added.
+            The original text with markup characters removed and the positions
+            of the substrings wrapped by the markup characters.
         """
-        if self._formatter.auto_markup:
-            return (
-                self._formatter.strong[0]
-                + name_string
-                + self._formatter.strong[1])
-        else:
-            return name_string
+        return MarkupPositions([(name_string, 0)], [])
 
-    def _markup_args(self, args_string: str) -> str:
-        """Make argument names in the input string emphasized.
+    @staticmethod
+    def _parse_args_markup(args_string: str) -> Tuple[str, MarkupPositions]:
+        """Get the position of markup for the definition argument string.
 
         Returns:
-            The input string with markup for emphasized text added.
+            The original text with markup characters removed and the positions
+            of the substrings wrapped by the markup characters.
         """
-        if self._formatter.auto_markup:
-            return ARG_REGEX.sub(
-                self._formatter.em[0] + r"\g<1>" + self._formatter.em[1],
-                args_string)
-        else:
-            return args_string
+        positions = MarkupPositions([], [])
+        for word_match in ARG_REGEX.finditer(args_string):
+            match_counter = 0
+            match_string = word_match.group()
+            for match_instance in re.finditer(
+                    re.escape(match_string), args_string):
+                if match_instance.span() == word_match.span():
+                    positions.em.append((match_string, match_counter))
+                match_counter += 1
 
-    def _sub_args(self, args: str, text: str) -> str:
-        """Search a string for arguments and add markup.
+        return positions
+
+    @staticmethod
+    def _parse_msg_markup(args: str, text: str) -> MarkupPositions:
+        """Get the positions of markup for the definition message.
 
         This method only formats arguments surrounded by non-word characters.
 
@@ -485,16 +489,24 @@ class HelpItem:
             args: The argument string to get arguments from.
 
         Returns:
-            The given text with markup added.
+            The original text with markup characters removed and the positions
+            of the substrings wrapped by the markup characters.
         """
+        positions = MarkupPositions([], [])
         for arg in ARG_REGEX.findall(args):
-            text = re.sub(
-                r"(?<!\w){}(?!\w)".format(re.escape(arg)),
-                self._markup_args(arg), text)
-        return text
+            for word_match in re.finditer(
+                    r"(?<!\w){}(?!\w)".format(re.escape(arg)), text):
+                match_counter = 0
+                match_string = word_match.group()
+                for match_instance in re.finditer(
+                        re.escape(match_string), text):
+                    if match_instance.span() == word_match.span():
+                        positions.em.append((match_string, match_counter))
+                    match_counter += 1
 
-    @staticmethod
-    def _parse_manual_markup(text: str) -> Tuple[str, MarkupPositions]:
+        return positions
+
+    def _parse_manual_markup(self, text: str) -> Tuple[str, MarkupPositions]:
         """Remove reST markup characters from text and get their positions.
 
         This method only parses 'strong' and 'emphasized' inline markup.
@@ -511,6 +523,9 @@ class HelpItem:
             The original text with markup characters removed and the positions
             of the substrings wrapped by the markup characters.
         """
+        if not self._formatter.manual_markup:
+            return text, MarkupPositions([], [])
+
         inliner = Inliner()
         default_settings = OptionParser(
             components=(Parser,)).get_default_values()
@@ -518,7 +533,8 @@ class HelpItem:
 
         strong_spans = []
         em_spans = []
-        while inliner.patterns.initial.search(text):
+        remaining = text
+        while inliner.patterns.initial.search(remaining):
             initial_match = inliner.patterns.initial.search(text)
             start_match_start = initial_match.start("start")
             start_match_end = initial_match.end("start")
@@ -532,6 +548,9 @@ class HelpItem:
                 continue
 
             end_match = end_pattern.search(initial_match.string[start_match_end:])
+            if not end_match:
+                remaining = remaining[start_match_end:]
+                continue
             end_match_start = end_match.start(1) + start_match_end
             end_match_end = end_match.end(1) + start_match_end
 
@@ -546,6 +565,7 @@ class HelpItem:
                 em_spans.append((substring, position))
 
             text = text[:start_match_start] + substring + text[end_match_end:]
+            remaining = remaining[end_match_end:]
 
         markup_positions = MarkupPositions([], [])
 
@@ -569,47 +589,43 @@ class HelpItem:
 
         return text, markup_positions
 
-    def _apply_manual_markup(
-            self, text: str, positions: MarkupPositions) -> str:
+    def _apply_markup(
+            self, text: str, manual_positions: MarkupPositions,
+            auto_positions: MarkupPositions) -> str:
         """Apply markup to text at certain positions.
 
         Args:
             text: The text to apply markup to.
-            positions: The positions of substring to apply markup to.
+            manual_positions: The positions of substring to apply manual markup
+                to.
+            auto_positions: The positions of substring to apply auto markup to.
 
         Returns:
             The original text with markup added.
         """
-        if not self._formatter.manual_markup:
-            return text
+        for markup_type in ["strong", "em"]:
+            combined_positions = []
 
-        for substring, instance in positions.strong:
-            try:
-                match = list(re.finditer(re.escape(substring), text))[instance]
-            except IndexError:
-                # This can occur when manual markup conflicts with automatic
-                # markup.
-                continue
-            text = (
-                text[:match.start()]
-                + self._formatter.strong[0]
-                + text[match.start():match.end()]
-                + self._formatter.strong[1]
-                + text[match.end():])
+            # Add manual markup first so that it overrides automatic markup if
+            # they overlap.
+            if self._formatter.manual_markup:
+                combined_positions += getattr(manual_positions, markup_type)
+            if self._formatter.auto_markup:
+                combined_positions += getattr(auto_positions, markup_type)
 
-        for substring, instance in positions.em:
-            try:
-                match = list(re.finditer(re.escape(substring), text))[instance]
-            except IndexError:
-                # This can occur when manual markup conflicts with automatic
-                # markup.
-                continue
-            text = (
-                text[:match.start()]
-                + self._formatter.em[0]
-                + text[match.start():match.end()]
-                + self._formatter.em[1]
-                + text[match.end():])
+            for substring, instance in combined_positions:
+                try:
+                    match = list(re.finditer(re.escape(substring), text))[instance]
+                except IndexError:
+                    # This can occur when manual markup conflicts with
+                    # automatic markup.
+                    continue
+                text = (
+                    text[:match.start()]
+                    + getattr(self._formatter, markup_type)[0]
+                    + text[match.start():match.end()]
+                    + getattr(self._formatter, markup_type)[1]
+                    + text[match.end():])
 
         return text
 
@@ -667,7 +683,9 @@ class HelpItem:
 
         return longest
 
-    def _create_sig(self, name: str, args: str, sig_buffer: int) -> str:
+    def _create_sig(
+            self, name: str, args: str, name_positions: MarkupPositions,
+            args_positions: MarkupPositions, sig_buffer: int) -> str:
         """Create a signature for a definition.
 
         A 'signature' is the concatenation of the definition's name and
@@ -676,6 +694,10 @@ class HelpItem:
         Args:
             name: The name to be defined.
             args: The argument string for the definition.
+            name_positions: The positions at which to insert markup for the
+                name string.
+            args_positions: The positions at which to insert markup for the
+                argument string.
             sig_buffer: The amount of space there should be between the
                 beginning of the line and the message.
 
@@ -690,6 +712,9 @@ class HelpItem:
         # definition separately, spaces are used as filler in certain places
         # so that the text can be wrapped properly before the real text is
         # substituted.
+        auto_name_positions = self._parse_name_markup(name)
+        auto_args_positions = self._parse_args_markup(args)
+
         wrapper = self._get_wrapper(
             add_initial=-self._formatter.indent_increment,
             drop_whitespace=False)
@@ -701,8 +726,12 @@ class HelpItem:
         output_name = wrapper.fill(name)
         output_sig = (
             wrapper.initial_indent
-            + self._markup_name(output_name[self._current_indent:])
-            + self._markup_args(output_args[name_buffer:]))
+            + self._apply_markup(
+                output_name[self._current_indent:], name_positions,
+                auto_name_positions)
+            + self._apply_markup(
+                output_args[name_buffer:], args_positions,
+                auto_args_positions))
 
         return output_sig
 
@@ -720,7 +749,8 @@ class HelpItem:
         wrapper = self._get_wrapper()
         output_text, positions = self._parse_manual_markup(content)
         output_text = wrapper.fill(output_text)
-        output_text = self._apply_manual_markup(output_text, positions)
+        output_text = self._apply_markup(
+            output_text, positions, MarkupPositions([], []))
         return output_text
 
     @staticmethod
@@ -737,10 +767,9 @@ class HelpItem:
             The formatted definition as a string.
         """
         name, args, msg = content
-        _, positions = self._parse_manual_markup(" ".join([name, args, msg]))
-        name, _ = self._parse_manual_markup(name)
-        args, _ = self._parse_manual_markup(args)
-        msg, _ = self._parse_manual_markup(msg)
+        name, name_positions = self._parse_manual_markup(name)
+        args, args_positions = self._parse_manual_markup(args)
+        msg, msg_positions = self._parse_manual_markup(msg)
 
         if aligned:
             sig_buffer = self._get_aligned_buffer()
@@ -749,7 +778,8 @@ class HelpItem:
                 " ".join([string for string in (name, args) if string]))
                 + self._formatter.inline_space)
 
-        output_sig = self._create_sig(name, args, sig_buffer)
+        output_sig = self._create_sig(
+            name, args, name_positions, args_positions, sig_buffer)
 
         subsequent_indent = self._formatter.indent_increment
         if aligned:
@@ -757,11 +787,13 @@ class HelpItem:
         wrapper = self._get_wrapper(
             add_initial=-self._current_indent,
             add_subsequent=subsequent_indent)
-        output_msg = wrapper.fill(" "*sig_buffer + msg)
-        output_msg = self._sub_args(args, output_msg)
 
-        combined_msg = output_sig + output_msg[sig_buffer:]
-        return self._apply_manual_markup(combined_msg, positions)
+        auto_msg_positions = self._parse_msg_markup(args, msg)
+        output_msg = wrapper.fill(" "*sig_buffer + msg)
+        output_msg = self._apply_markup(
+            output_msg, msg_positions, auto_msg_positions)
+
+        return output_sig + output_msg[sig_buffer:]
 
     @staticmethod
     def _format_heading_def(
@@ -777,28 +809,30 @@ class HelpItem:
             The formatted definition as a string.
         """
         name, args, msg = content
-        _, positions = self._parse_manual_markup(" ".join([name, args, msg]))
-        name, _ = self._parse_manual_markup(name)
-        args, _ = self._parse_manual_markup(args)
-        msg, _ = self._parse_manual_markup(msg)
+        name, name_positions = self._parse_manual_markup(name)
+        args, args_positions = self._parse_manual_markup(args)
+        msg, msg_positions = self._parse_manual_markup(msg)
 
-        output_sig = self._create_sig(name, args, 0)
+        output_sig = self._create_sig(
+            name, args, name_positions, args_positions, 0)
 
-        if msg:
-            with contextlib.ExitStack() as stack:
-                if aligned:
-                    sig_buffer = self._get_aligned_buffer()
-                    wrapper = self._get_wrapper(
-                        add_initial=sig_buffer,
-                        add_subsequent=(
-                            sig_buffer + self._formatter.indent_increment))
-                else:
-                    stack.enter_context(self._indent())
-                    wrapper = self._get_wrapper()
-                output_msg = wrapper.fill(msg)
-                output_msg = self._sub_args(args, output_msg)
+        if not msg:
+            return output_sig
 
-            combined_msg = "\n".join([output_sig, output_msg])
-            return self._apply_manual_markup(combined_msg, positions)
-        else:
-            return self._apply_manual_markup(output_sig, positions)
+        with contextlib.ExitStack() as stack:
+            if aligned:
+                sig_buffer = self._get_aligned_buffer()
+                wrapper = self._get_wrapper(
+                    add_initial=sig_buffer,
+                    add_subsequent=(
+                        sig_buffer + self._formatter.indent_increment))
+            else:
+                stack.enter_context(self._indent())
+                wrapper = self._get_wrapper()
+
+            auto_msg_positions = self._parse_msg_markup(args, msg)
+            output_msg = wrapper.fill(msg)
+            output_msg = self._apply_markup(
+                output_msg, msg_positions, auto_msg_positions)
+
+        return "\n".join([output_sig, output_msg])
