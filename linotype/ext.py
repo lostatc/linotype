@@ -321,8 +321,9 @@ class LinotypeDirective(Directive):
             self.content, self.content_offset, nested_nodes)
         def_list_index = nested_nodes.first_child_matching_class(
             nodes.definition_list)
-        definitions = _parse_definition_list(nested_nodes[def_list_index])
-        _extend_item_content(definitions, help_item)
+        if def_list_index:
+            definitions = _parse_definition_list(nested_nodes[def_list_index])
+            _extend_item_content(definitions, help_item)
 
         return [self._parse_tree(help_item)]
 
