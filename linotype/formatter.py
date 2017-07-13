@@ -21,9 +21,20 @@ import re
 import textwrap
 import functools
 import contextlib
-from typing import Any, Callable, Tuple, Generator, Optional
+from typing import Any, Callable, Tuple, Generator, Optional, NamedTuple, List
+
+from docutils.frontend import OptionParser
+from docutils.parsers.rst import Parser
+from docutils.parsers.rst.states import Inliner
 
 ARG_REGEX = re.compile(r"([\w-]+)")
+
+# This keeps track of the positions of marked-up substrings in a string.
+# Each tuple contains the substring and the instance of that substring for
+# cases where there are more than one in the string.
+MarkupPositions = NamedTuple(
+    "MarkupPositions",
+    [("strong", List[Tuple[str, int]]), ("em", List[Tuple[str, int]])])
 
 
 class HelpFormatter:
@@ -32,12 +43,13 @@ class HelpFormatter:
     Args:
         indent_increment: The number of spaces to increase/decrease the indent
             level by for each level.
+        inline_space: The number of spaces to leave between the argument string
+            and message of each definition when they are on the same line.
         width: The number of columns at which to wrap text in the help message.
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
+        manual_markup: Parse reST 'strong' and 'emphasis' inline markup.
         visible: Make the text visible in the output.
-        inline_space: The number of spaces to leave between the argument string
-            and message of each definition when they are on the same line.
         strong: The strings to print before and after strong text (default is
             ANSI bold). These are ignored when wrapping text.
         em: The strings to print before and after emphasized text (default is
@@ -46,26 +58,28 @@ class HelpFormatter:
     Attributes:
         indent_increment: The number of spaces to increase/decrease the indent
             level by for each level.
+        inline_space: The number of spaces to leave between the argument string
+            and message of each definition when they are on the same line.
         width: The number of columns at which to wrap text in the help message.
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
+        manual_markup: Parse reST 'strong' and 'emphasis' inline markup.
         visible: Make the text visible in the output.
-        inline_space: The number of spaces to leave between the argument string
-            and message of each definition when they are on the same line.
         strong: the strings to print before and after strong text (default is
             ANSI bold). These are ignored when wrapping text.
         em: The strings to print before and after emphasized text (default is
             ANSI underlined). These are ignored when wrapping text.
     """
     def __init__(
-            self, indent_increment=4, width=79, auto_markup=True, visible=True,
-            inline_space=2, strong=("\33[1m", "\33[0m"),
-            em=("\33[4m", "\33[0m")) -> None:
+            self, indent_increment=4, inline_space=2, width=79,
+            auto_markup=True, manual_markup=True, visible=True,
+            strong=("\33[1m", "\33[0m"), em=("\33[4m", "\33[0m")) -> None:
         self.indent_increment = indent_increment
+        self.inline_space = inline_space
         self.width = width
         self.auto_markup = auto_markup
+        self.manual_markup = manual_markup
         self.visible = visible
-        self.inline_space = inline_space
         self.strong = strong
         self.em = em
 
@@ -479,6 +493,126 @@ class HelpItem:
                 self._markup_args(arg), text)
         return text
 
+    @staticmethod
+    def _parse_manual_markup(text: str) -> Tuple[str, MarkupPositions]:
+        """Remove reST markup characters from text and get their positions.
+
+        This method only parses 'strong' and 'emphasized' inline markup.
+
+        Example:
+            >>> _parse_manual_markup("*Is* markup only **markup**?")
+            ("Is markup only markup?", MarkupPositions(
+                strong=[("markup", 1)], em=[("Is", 0)]))
+
+        Args:
+            text: The text containing reST inline markup.
+
+        Returns:
+            The original text with markup characters removed and the positions
+            of the substrings wrapped by the markup characters.
+        """
+        inliner = Inliner()
+        default_settings = OptionParser(
+            components=(Parser,)).get_default_values()
+        inliner.init_customizations(default_settings)
+
+        strong_spans = []
+        em_spans = []
+        while inliner.patterns.initial.search(text):
+            initial_match = inliner.patterns.initial.search(text)
+            start_match_start = initial_match.start("start")
+            start_match_end = initial_match.end("start")
+            initial_match_string = initial_match.groupdict()["start"]
+
+            if initial_match_string == "**":
+                end_pattern = inliner.patterns.strong
+            elif initial_match_string == "*":
+                end_pattern = inliner.patterns.emphasis
+            else:
+                continue
+
+            end_match = end_pattern.search(initial_match.string[start_match_end:])
+            end_match_start = end_match.start(1) + start_match_end
+            end_match_end = end_match.end(1) + start_match_end
+
+            substring = text[start_match_end:end_match_start]
+            position = (
+                start_match_end - len(initial_match_string),
+                end_match_start - len(initial_match_string))
+
+            if initial_match_string == "**":
+                strong_spans.append((substring, position))
+            elif initial_match_string == "*":
+                em_spans.append((substring, position))
+
+            text = text[:start_match_start] + substring + text[end_match_end:]
+
+        markup_positions = MarkupPositions([], [])
+
+        # Record the substring that should be marked up as 'strong' and the
+        # instance of it if it occurs multiple times in the text.
+        for substring, span in strong_spans:
+            match_counter = 0
+            for match in re.finditer(re.escape(substring), text):
+                if match.span() == span:
+                    markup_positions.strong.append((substring, match_counter))
+                match_counter += 1
+
+        # Record the substring that should be marked up as 'emphasized' and the
+        # instance of it if it occurs multiple times in the text.
+        for substring, span in em_spans:
+            match_counter = 0
+            for match in re.finditer(re.escape(substring), text):
+                if match.span() == span:
+                    markup_positions.em.append((substring, match_counter))
+                match_counter += 1
+
+        return text, markup_positions
+
+    def _apply_manual_markup(
+            self, text: str, positions: MarkupPositions) -> str:
+        """Apply markup to text at certain positions.
+
+        Args:
+            text: The text to apply markup to.
+            positions: The positions of substring to apply markup to.
+
+        Returns:
+            The original text with markup added.
+        """
+        if not self._formatter.manual_markup:
+            return text
+
+        for substring, instance in positions.strong:
+            try:
+                match = list(re.finditer(re.escape(substring), text))[instance]
+            except IndexError:
+                # This can occur when manual markup conflicts with automatic
+                # markup.
+                continue
+            text = (
+                text[:match.start()]
+                + self._formatter.strong[0]
+                + text[match.start():match.end()]
+                + self._formatter.strong[1]
+                + text[match.end():])
+
+        for substring, instance in positions.em:
+            try:
+                match = list(re.finditer(re.escape(substring), text))[instance]
+            except IndexError:
+                # This can occur when manual markup conflicts with automatic
+                # markup.
+                continue
+            text = (
+                text[:match.start()]
+                + self._formatter.em[0]
+                + text[match.start():match.end()]
+                + self._formatter.em[1]
+                + text[match.end():])
+
+        return text
+
     def _get_wrapper(
             self, add_initial=0, add_subsequent=0, drop_whitespace=True
             ) -> textwrap.TextWrapper:
@@ -584,7 +718,10 @@ class HelpItem:
             The formatted text as a string.
         """
         wrapper = self._get_wrapper()
-        return wrapper.fill(content)
+        output_text, positions = self._parse_manual_markup(content)
+        output_text = wrapper.fill(output_text)
+        output_text = self._apply_manual_markup(output_text, positions)
+        return output_text
 
     @staticmethod
     def _format_inline_def(
@@ -600,6 +737,11 @@ class HelpItem:
             The formatted definition as a string.
         """
         name, args, msg = content
+        _, positions = self._parse_manual_markup(" ".join([name, args, msg]))
+        name, _ = self._parse_manual_markup(name)
+        args, _ = self._parse_manual_markup(args)
+        msg, _ = self._parse_manual_markup(msg)
+
         if aligned:
             sig_buffer = self._get_aligned_buffer()
         else:
@@ -618,7 +760,8 @@ class HelpItem:
         output_msg = wrapper.fill(" "*sig_buffer + msg)
         output_msg = self._sub_args(args, output_msg)
 
-        return output_sig + output_msg[sig_buffer:]
+        combined_msg = output_sig + output_msg[sig_buffer:]
+        return self._apply_manual_markup(combined_msg, positions)
 
     @staticmethod
     def _format_heading_def(
@@ -634,6 +777,11 @@ class HelpItem:
             The formatted definition as a string.
         """
         name, args, msg = content
+        _, positions = self._parse_manual_markup(" ".join([name, args, msg]))
+        name, _ = self._parse_manual_markup(name)
+        args, _ = self._parse_manual_markup(args)
+        msg, _ = self._parse_manual_markup(msg)
+
         output_sig = self._create_sig(name, args, 0)
 
         if msg:
@@ -650,6 +798,7 @@ class HelpItem:
                 output_msg = wrapper.fill(msg)
                 output_msg = self._sub_args(args, output_msg)
 
-            return "\n".join([output_sig, output_msg])
+            combined_msg = "\n".join([output_sig, output_msg])
+            return self._apply_manual_markup(combined_msg, positions)
         else:
-            return output_sig
+            return self._apply_manual_markup(output_sig, positions)

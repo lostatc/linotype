@@ -3,12 +3,14 @@ Usage
 Messages in **liotype** consist of a tree of 'items' of which there are
 currently two types, *text* and *definitions*. Every item can contain zero or
 more other items, and every level of nested items increases the indentation
-level. The **HelpItem** class is used to create a root-level item, and it
-accepts a **HelpFormatter** instance which is used to define how items are
-formatted. Every **HelpItem** object has public methods for creating new
-sub-items which in turn return a new **HelpItem** object. Items can be assigned
-IDs that can be referenced in the **Sphinx** documentation. Here is an example
-that prints a simple help message:
+level. The **HelpItem** class is used to create a root-level item, and every
+**HelpItem** object has public methods for creating new sub-items which in turn
+return a new **HelpItem** object.
+
+Every **HelpItem** object accepts a **HelpFormatter** instance which is used to
+define how items are formatted. Items can be assigned IDs that can be
+referenced in the **Sphinx** documentation. Here is an example that prints a
+simple help message:
 
 .. code-block:: python
     :linenos:
@@ -25,6 +27,19 @@ that prints a simple help message:
         return help_root
 
     print(help_message().format_help())
+
+Line wrapping, indentation, alignment and markup are all applied automatically
+according to attributes set in the HelpFormatter object. Additionally, inline
+'strong' and 'emphasized' markup can be applied manually using the
+reStructuredText syntax::
+
+    This text is **strong**.
+    This text is *emphasized*.
+
+In cases where manual markup overlaps automatic markup, the manual markup is
+ignored.
+
+----
 
 To use **linotype** with **Sphinx**, you must first add 'linotype.ext' to the
 list of **Sphinx** extensions in the *conf.py* file for your project:
