@@ -68,6 +68,9 @@ The help message can be imported into your **Sphinx** documentation using the
     Do not automatically apply **strong** and *emphasized* formatting to the
     output.
 
+\:no_manual_markup\:
+    Do not parse reStructuredText inline markup.
+
 The options :module: and :filepath: are mutually exclusive. The options :func:
 and either :module: or :filepath: are required.
 
@@ -75,9 +78,8 @@ Using the 'linotype' directive, you can extend or replace parts of your help
 message. This allows you to add new content that appears in your **Sphinx**
 documentation but not in your printed output. This is done on a per-item basis
 using a reStructuredText definition list, where the term is the ID of an item
-and the definition is the new text to use. reST markup in the new text is not
-parsed. You can also add a classifier, which changes how the new text is
-incorporated:
+and the definition is the new text to use. You can also add a classifier, which
+changes how the new text is incorporated:
 
 @before
     Insert the new text before the existing text.

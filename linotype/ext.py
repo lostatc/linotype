@@ -21,14 +21,16 @@ import os
 import re
 import importlib
 import collections
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, NamedTuple
 
 from docutils import nodes
-from docutils.parsers.rst import Directive
+from docutils.frontend import OptionParser
+from docutils.parsers.rst import Directive, Parser
+from docutils.parsers.rst.states import Inliner
 from docutils.parsers.rst.directives import unchanged, flag
 
-from linotype.formatter import ARG_REGEX
-from linotype.formatter import HelpItem
+from linotype.formatter import (
+    ARG_REGEX, MARKUP_CHARS, HelpItem, MarkupPositions)
 
 
 def _parse_definition_list(
@@ -113,7 +115,8 @@ class LinotypeDirective(Directive):
         "func": unchanged,
         "item_id": unchanged,
         "children": flag,
-        "no_auto_markup": flag}
+        "no_auto_markup": flag,
+        "no_manual_markup": flag}
 
     def _get_help_item(self) -> HelpItem:
         """Get the HelpItem object from the given module or filepath."""
@@ -153,60 +156,95 @@ class LinotypeDirective(Directive):
 
         return func()
 
-    def _markup_args(self, args_string: str) -> List[nodes.Node]:
-        """Make argument names in the input string emphasized.
+    def _apply_markup(
+            self, text: str, manual_positions: MarkupPositions,
+            auto_positions: MarkupPositions) -> List[nodes.Node]:
+        """Convert markup to a list of nodes.
 
-        Returns:
-            A list of 'emphasis' and 'Text' nodes.
-        """
-        if "no_auto_markup" in self.options:
-            return [nodes.Text(args_string)]
-        else:
-            output_nodes = []
-            for string in ARG_REGEX.split(args_string):
-                if ARG_REGEX.search(string):
-                    output_nodes.append(nodes.emphasis(text=string))
-                else:
-                    output_nodes.append(nodes.Text(string))
-            return output_nodes
-
-    def _markup_name(self, name_string: str) -> nodes.Node:
-        """Make the input string strong.
-
-        Returns:
-            A 'strong' or 'Text' node.
-        """
-        if "no_auto_markup" in self.options:
-            return nodes.Text(name_string)
-        else:
-            return nodes.strong(text=name_string)
-
-    def _sub_args(self, args_string: str, text: str) -> List[nodes.Node]:
-        """Search a string for arguments and add markup.
-
-        This method only formats arguments surrounded by non-word characters.
+        This method supports nested markup.
 
         Args:
-            text: The string to have markup added to.
-            args_string: The argument string to get arguments from.
+            text: The text to apply markup to.
+            manual_positions: The positions of substrings to apply manual
+                markup to.
+            auto_positions: The positions of substrings to apply auto markup
+                to.
 
         Returns:
-            The given text with markup added.
+            A list of Node objects.
         """
-        if "no_auto_markup" in self.options or not args_string:
-            return [nodes.Text(text)]
-        else:
-            output_nodes = []
-            arg_regex = re.compile(
-                r"(?<!\w)({})(?!\w)".format("|".join(
-                    re.escape(arg) for arg in ARG_REGEX.findall(args_string))))
-            for string in arg_regex.split(text):
-                if arg_regex.search(string):
-                    output_nodes.append(nodes.emphasis(text=string))
-                else:
-                    output_nodes.append(nodes.Text(string))
+        if manual_positions is None:
+            manual_positions = MarkupPositions([], [])
 
-            return output_nodes
+        if auto_positions is None:
+            auto_positions = MarkupPositions([], [])
+
+        markup_spans = []
+        for markup_type in ["strong", "em"]:
+            combined_positions = []
+
+            if "no_manual_markup" not in self.options:
+                combined_positions += getattr(manual_positions, markup_type)
+            if "no_auto_markup" not in self.options:
+                combined_positions += getattr(auto_positions, markup_type)
+
+            # Get the positions of each substring in the string.
+            for substring, instance in combined_positions:
+                try:
+                    match = list(re.finditer(re.escape(substring), text))[instance]
+                except IndexError:
+                    # This can occur when manual markup conflicts with
+                    # automatic markup.
+                    continue
+                markup_spans.append((match.span(), markup_type))
+
+        # Order the spans by their start position.
+        markup_spans.sort(key=lambda x: x[0][0])
+
+        def parse_top_level(markup_spans, parent_span):
+            # Get top-level spans and include spans without any markup.
+            prev_end = parent_span[0]
+            top_level_spans = []
+            for (start, end), markup_type in markup_spans:
+                if start < prev_end or (start, end) == parent_span:
+                    continue
+
+                top_level_spans.append(((prev_end, start), None))
+                top_level_spans.append(((start, end), markup_type))
+
+                prev_end = end
+
+            top_level_spans.append(((prev_end, parent_span[1]), None))
+
+            # Create nodes from those spans.
+            top_level_nodes = []
+            for (start, end), markup_type in top_level_spans:
+                if markup_type is None:
+                    top_level_nodes.append(nodes.Text(text[start:end]))
+                elif markup_type == "strong":
+                    top_level_nodes.append(nodes.strong())
+                elif markup_type == "em":
+                    top_level_nodes.append(nodes.emphasis())
+
+            # Iterate over nested spans and add those nodes to their parent
+            # nodes.
+            for i, ((start, end), markup_type) in enumerate(top_level_spans):
+                if markup_type is None:
+                    continue
+
+                nested_spans = []
+                for (nested_start, nested_end), nested_type in markup_spans:
+                    if (nested_start in range(start, end)
+                            and nested_end in range(start, end + 1)
+                            and (nested_start, nested_end) != parent_span):
+                        nested_spans.append(
+                            ((nested_start, nested_end), nested_type))
+
+                top_level_nodes[i] += parse_top_level(nested_spans, (start, end))
+
+            return top_level_nodes
+
+        return parse_top_level(markup_spans, (0, len(text)))
 
     def _parse_item(self, item: HelpItem) -> List[nodes.Node]:
         """Convert a HelpItem object to a docutils Node object.
@@ -223,19 +261,41 @@ class LinotypeDirective(Directive):
         if item.type == "text":
             # Add a definition node after the paragraph node to act as a
             # starting point for new sub-nodes.
+            text = item.content
+            if "no_manual_markup" in self.options:
+                text_positions = None
+            else:
+                text, text_positions = item.parse_manual_markup(text)
+
             node = [
-                nodes.paragraph(text=item.content),
+                nodes.paragraph(
+                    "", "", *self._apply_markup(text, text_positions, None)),
                 nodes.definition_list_item(
                     "", nodes.term(), nodes.definition())]
         elif item.type == "definition":
             name, args, msg = item.content
+            if "no_manual_markup" in self.options:
+                name_positions = args_positions = msg_positions = None
+            else:
+                name, name_positions = item.parse_manual_markup(name)
+                args, args_positions = item.parse_manual_markup(args)
+                msg, msg_positions = item.parse_manual_markup(msg)
+
+            auto_name_positions = item.parse_name_markup(name)
+            auto_args_positions = item.parse_args_markup(args)
+            auto_msg_positions = item.parse_msg_markup(args, msg)
+
             node = [nodes.definition_list_item(
                     "", nodes.term(
-                        "", "", self._markup_name(name), nodes.Text(" "),
-                        *self._markup_args(args)),
+                        "", "", *self._apply_markup(
+                            name, name_positions, auto_name_positions),
+                        nodes.Text(" "),
+                        *self._apply_markup(
+                            args, args_positions, auto_args_positions)),
                     nodes.definition(
                         "", nodes.paragraph(
-                            "", "", *self._sub_args(args, msg))))]
+                            "", "", *self._apply_markup(
+                                msg, msg_positions, auto_msg_positions))))]
         else:
             raise ValueError("unrecognized item type '{0}'".format(item.type))
 
