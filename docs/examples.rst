@@ -11,32 +11,32 @@ otherwise fit.
 .. code-block:: python
     :linenos:
 
-    from linotype import HelpFormatter, HelpItem
+    from linotype import Formatter, RootItem
 
     def help_message():
-        formatter = HelpFormatter()
-        help_root = HelpItem(formatter)
+        formatter = Formatter()
+        root_item = RootItem(formatter)
 
-        help_root.add_definition(
+        root_item.add_definition(
             "-q, --quiet", "",
             "Suppress non-error messages.",
             style="inline_aligned")
-        help_root.add_definition(
+        root_item.add_definition(
             "-v, --verbose", "",
             "Increase verbosity.",
             style="inline_aligned")
-        help_root.add_definition(
+        root_item.add_definition(
             "    --info", "FLAGS",
             "Fine-grained informational verbosity.",
             style="inline_aligned")
-        help_root.add_definition(
+        root_item.add_definition(
             "    --only-write-batch", "FILE",
             "Like --write-batch but without updating dest.",
             style="heading_aligned")
 
-        return help_root
+        return root_item
 
-    print(help_message().format_help())
+    print(help_message().format())
 
 This is what the output looks like::
 
@@ -55,18 +55,18 @@ This can be accomplished using item IDs.
 .. code-block:: python
     :linenos:
 
-    from linotype import HelpFormatter, HelpItem
+    from linotype import Formatter, RootItem
 
     def help_message():
-        formatter = HelpFormatter()
-        help_root = HelpItem(formatter)
+        formatter = Formatter()
+        root_item = RootItem(formatter)
 
-        usage = help_root.add_text("Usage:", item_id="usage")
+        usage = root_item.add_text("Usage:", item_id="usage")
         usage.add_definition(
             "zielen", "[global_options] command [command_options] [command_args]",
             "")
 
-        global_opts = help_root.add_text("Global Options:", item_id="global")
+        global_opts = root_item.add_text("Global Options:", item_id="global")
         global_opts.add_definition(
             "--help", "",
             "Print a usage message and exit.")
@@ -74,9 +74,9 @@ This can be accomplished using item IDs.
             "--version", "",
             "Print the version number and exit.")
 
-        return help_root
+        return root_item
 
-    print(help_message().format_help())
+    print(help_message().format())
 
 This is what your **Sphinx** source file could look like:
 
@@ -111,18 +111,18 @@ message under certain circumstances. One example would be to have a global help
 message that displays an overview of all subcommands and then a more specific
 help message for each subcommand. This can be accomplished by limiting the
 number of levels of nested items to descend into or by making some items
-invisible via a HelpFormatter class. The first method is shown below.
+invisible via a **Formatter** class. The first method is shown below.
 
 .. code-block:: python
     :linenos:
 
-    from linotype import HelpFormatter, HelpItem
+    from linotype import Formatter, RootItem
 
     def help_message():
-        formatter = HelpFormatter()
-        help_root = HelpItem(formatter)
+        formatter = Formatter()
+        root_item = RootItem(formatter)
 
-        commands = help_root.add_text("Commands:")
+        commands = root_item.add_text("Commands:")
 
         initialize_cmd = commands.add_definition(
             "initialize", "[options] name",
@@ -140,9 +140,9 @@ invisible via a HelpFormatter class. The first method is shown below.
             "files based on their priorities.",
             item_id="sync")
 
-        return help_root
+        return root_item
 
     if command:
-        print(help_message().format_help(item_id=command))
+        print(help_message().format(item_id=command))
     else:
-        print(help_message().format_help(levels=2))
+        print(help_message().format(levels=2))

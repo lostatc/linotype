@@ -30,7 +30,7 @@ from docutils.parsers.rst.states import Inliner
 from docutils.parsers.rst.directives import unchanged, flag
 
 from linotype.formatter import (
-    ARG_REGEX, MARKUP_CHARS, HelpItem, MarkupPositions)
+    ARG_REGEX, RootItem, TextItem, DefinitionItem, MarkupPositions)
 
 
 def _parse_definition_list(
@@ -73,20 +73,20 @@ def _parse_definition_list(
 
 
 def _extend_item_content(
-        definitions: Dict[str, Tuple[str, str]], help_item: HelpItem
+        definitions: Dict[str, Tuple[str, str]], root_item: RootItem
         ) -> None:
     """Modify the content of the item tree based on the definitions provided.
     
     Args:
         definitions: A dict where keys are item IDs and values are tuples
             containing the classifier and the content as text.
-        help_item: The HelpItem object to be modified in-place.
+        root_item: The RootItem object to be modified in-place.
     """
     for term, (classifier, new_content) in definitions.items():
-        item = help_item.get_item_by_id(term, raising=True)
-        if item.type == "text":
+        item = root_item.get_item_by_id(term, raising=True)
+        if isinstance(item, TextItem):
             existing_content = item.content
-        elif item.type == "definition":
+        elif isinstance(item, DefinitionItem):
             existing_content = item.content[2]
         else:
             continue
@@ -98,9 +98,9 @@ def _extend_item_content(
         elif classifier == "@after":
             revised_content = " ".join([existing_content, new_content])
 
-        if item.type == "text":
+        if isinstance(item, TextItem):
             item.content = revised_content
-        elif item.type == "definition":
+        if isinstance(item, DefinitionItem):
             item.content[2] = revised_content
 
 
@@ -118,8 +118,8 @@ class LinotypeDirective(Directive):
         "no_auto_markup": flag,
         "no_manual_markup": flag}
 
-    def _get_help_item(self) -> HelpItem:
-        """Get the HelpItem object from the given module or filepath."""
+    def _retrieve_item(self) -> RootItem:
+        """Get the RootItem object from the given module or filepath."""
         if "module" in self.options and "func" in self.options:
             # Import from given module.
             module_name = self.options["module"]
@@ -246,11 +246,11 @@ class LinotypeDirective(Directive):
 
         return parse_top_level(markup_spans, (0, len(text)))
 
-    def _parse_item(self, item: HelpItem) -> List[nodes.Node]:
-        """Convert a HelpItem object to a docutils Node object.
+    def _parse_item(self, item: RootItem) -> List[nodes.Node]:
+        """Convert a RootItem object to a docutils Node object.
 
         Args:
-            item: The HelpItem object to convert to a Node object.
+            item: The RootItem object to convert to a Node object.
 
         Raises:
             ValueError: The type of the given item was not recognized.
@@ -258,7 +258,7 @@ class LinotypeDirective(Directive):
         Returns:
             A Node object.
         """
-        if item.type == "text":
+        if isinstance(item, TextItem):
             # Add a definition node after the paragraph node to act as a
             # starting point for new sub-nodes.
             text = item.content
@@ -272,7 +272,7 @@ class LinotypeDirective(Directive):
                     "", "", *self._apply_markup(text, text_positions, None)),
                 nodes.definition_list_item(
                     "", nodes.term(), nodes.definition())]
-        elif item.type == "definition":
+        elif isinstance(item, DefinitionItem):
             name, args, msg = item.content
             if "no_manual_markup" in self.options:
                 name_positions = args_positions = msg_positions = None
@@ -297,23 +297,23 @@ class LinotypeDirective(Directive):
                             "", "", *self._apply_markup(
                                 msg, msg_positions, auto_msg_positions))))]
         else:
-            raise ValueError("unrecognized item type '{0}'".format(item.type))
+            raise ValueError("unrecognized item type '{0}'".format(type(item)))
 
         return node
 
-    def _parse_tree(self, help_item: HelpItem) -> nodes.Node:
-        """Recursively iterate over a HelpItem object to generate Node objects.
+    def _parse_tree(self, root_item: RootItem) -> nodes.Node:
+        """Recursively iterate over a RootItem object to generate Node objects.
 
         Args:
-            help_item: The HelpItem object to convert to a tree of docutils
+            root_item: The RootItem object to convert to a tree of docutils
                 Node objects.
 
         Returns:
             The root Node object of the tree.
         """
         root_node = nodes.definition_list()
-        if help_item.type is not None:
-            root_node += self._parse_item(help_item)
+        if type(root_item) is not RootItem and root_item.content is not None:
+            root_node += self._parse_item(root_item)
 
         # This keeps track of the current indentation level by maintaining a
         # queue with the current parent node on the right and all of its
@@ -323,8 +323,8 @@ class LinotypeDirective(Directive):
         parent_node = root_node
         current_level = 0
 
-        for item in help_item.get_items():
-            if item is help_item:
+        for item in root_item.get_items():
+            if item is root_item:
                 continue
 
             if item.current_level > current_level:
@@ -360,20 +360,19 @@ class LinotypeDirective(Directive):
         return root_node
 
     def run(self) -> List[nodes.Node]:
-        """Convert a HelpItem object to a docutils Node tree.
+        """Convert a RootItem object to a docutils Node tree.
 
         Returns:
             A list of Node objects.
         """
-        help_item = self._get_help_item()
+        root_item = self._retrieve_item()
 
         if "item_id" in self.options:
-            help_item = help_item.get_item_by_id(
+            root_item = root_item.get_item_by_id(
                 self.options["item_id"], raising=True)
 
         if "children" in self.options:
-            help_item.type = None
-            help_item.content = None
+            root_item.content = None
 
         # Parse directive and extend item content.
         nested_nodes = nodes.paragraph()
@@ -383,9 +382,9 @@ class LinotypeDirective(Directive):
             nodes.definition_list)
         if def_list_index:
             definitions = _parse_definition_list(nested_nodes[def_list_index])
-            _extend_item_content(definitions, help_item)
+            _extend_item_content(definitions, root_item)
 
-        return [self._parse_tree(help_item)]
+        return [self._parse_tree(root_item)]
 
 
 def setup(app) -> None:

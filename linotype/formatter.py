@@ -21,7 +21,8 @@ import re
 import textwrap
 import functools
 import contextlib
-from typing import Any, Callable, Tuple, Generator, Optional, NamedTuple, List
+from typing import (
+    Any, Callable, Tuple, Generator, Optional, NamedTuple, List, Type)
 
 from docutils.frontend import OptionParser
 from docutils.parsers.rst import Parser
@@ -44,7 +45,7 @@ MarkupPositions = NamedTuple(
     [("strong", List[Tuple[str, int]]), ("em", List[Tuple[str, int]])])
 
 
-class HelpFormatter:
+class Formatter:
     """Control how terminal output is formatted.
 
     Args:
@@ -91,7 +92,7 @@ class HelpFormatter:
         self.em = em
 
 
-class HelpItem:
+class RootItem:
     """Format an item in a help message.
 
     This class allows for formatting a help message consisting of a tree of
@@ -111,7 +112,6 @@ class HelpItem:
         formatter: The formatter object for the item tree.
 
     Attributes:
-        type: The type of the current item.
         content: The content to display in the help message.
         id: The item ID.
         current_level: The current indentation level.
@@ -120,10 +120,9 @@ class HelpItem:
         _current_indent: The number of spaces that the item is currently
             indented.
         _formatter: The formatter object for the item tree.
-        _children: A list of HelpItem objects in the help message.
+        _children: A list of RootItem objects in the help message.
     """
-    def __init__(self, formatter: HelpFormatter) -> None:
-        self.type = None
+    def __init__(self, formatter: Formatter) -> None:
         self.content = None
         self.id = None
         self._format_func = None
@@ -132,27 +131,11 @@ class HelpItem:
         self._formatter = formatter
         self._children = []
 
-    @classmethod
-    def _new_item(
-            cls, item_type: str, content: Any, item_id: Optional[str],
-            format_func: Callable, parent: "HelpItem", starting_indent: int,
-            formatter: HelpFormatter) -> "HelpItem":
-        """Construct a new item."""
-        new_item = cls(formatter)
-        new_item.type = item_type
-        new_item.content = content
-        new_item.id = item_id
-        new_item._format_func = format_func
-        new_item._parent = parent
-        new_item._current_indent = starting_indent
-
-        return new_item
-
-    def __iadd__(self, other: "HelpItem") -> "HelpItem":
-        """Add another HelpItem object to the list of items.
+    def __iadd__(self, other: "RootItem") -> "RootItem":
+        """Add another RootItem object to the list of items.
 
         Args:
-            other: The HelpItem object to add.
+            other: The RootItem object to add.
 
         Raises:
             TypeError: The input was an unsupported type.
@@ -160,7 +143,7 @@ class HelpItem:
         if isinstance(other, type(self)):
             for item in other.get_items():
                 item._current_indent += self._formatter.indent_increment
-            if other.type is None:
+            if other is type(self):
                 for item in other._children:
                     # Exclude the empty root-level item so that formatting only
                     # to a certain depth works as expected.
@@ -181,7 +164,7 @@ class HelpItem:
     # Message building methods
     # ========================
 
-    def add_text(self, text: str, formatter=None, item_id=None) -> "HelpItem":
+    def add_text(self, text: str, formatter=None, item_id=None) -> "RootItem":
         """Add a text item to be printed.
 
         This item displays the given text wrapped to the given width.
@@ -195,14 +178,13 @@ class HelpItem:
                 Sphinx documentation.
 
         Returns:
-            The new HelpItem object.
+            The new RootItem object.
         """
-        return self._add_item(
-            "text", text, item_id, self._format_text, formatter=formatter)
+        return self._add_item(TextItem, text, item_id, formatter)
 
     def add_definition(
             self, name: str, args: str, msg: str, style="heading",
-            formatter=None, item_id=None) -> "HelpItem":
+            formatter=None, item_id=None) -> "RootItem":
         """Add a definition to be printed.
 
         This item displays a formatted definition in one of multiple styles.
@@ -249,32 +231,15 @@ class HelpItem:
             ValueError: The given style was not recognized.
 
         Returns:
-            The new HelpItem object.
+            The new RootItem object.
         """
-        if style in ["heading", "he"]:
-            format_func = functools.partial(
-                self._format_heading_def, aligned=False)
-        elif style in ["heading_aligned", "ha"]:
-            format_func = functools.partial(
-                self._format_heading_def, aligned=True)
-        elif style in ["inline", "in"]:
-            format_func = functools.partial(
-                self._format_inline_def, aligned=False)
-        elif style in ["inline_aligned", "ia"]:
-            format_func = functools.partial(
-                self._format_inline_def, aligned=True)
-        else:
-            raise ValueError(
-                "unrecognized definition style '{}'".format(style))
-
         return self._add_item(
-            "definition", [name, args, msg], item_id, format_func,
-            formatter=formatter)
+            DefinitionItem, [name, args, msg], item_id, formatter, style)
 
     def _add_item(
-            self, item_type: str, content: Any, item_id: Optional[str],
-            format_func: Callable, formatter: Optional[HelpFormatter]
-            ) -> "HelpItem":
+            self, item_type: Type["RootItem"], content: Any,
+            item_id: Optional[str], formatter: Optional[Formatter], *args
+            ) -> "RootItem":
         """Add a new item under the current item.
 
         Args:
@@ -282,7 +247,6 @@ class HelpItem:
             content: The content to print.
             item_id: A unique ID for the item that can be referenced in the
                 Sphinx documentation.
-            format_func: The function used to format the content.
             formatter: A HelpFormatter object for defining the formatting of
                 the new item. If 'None,' it uses the help formatter of its
                 parent item.
@@ -291,7 +255,7 @@ class HelpItem:
             ValueError: The given item ID is already in use.
 
         Returns:
-            The new HelpItem object.
+            The new RootItem object.
         """
         if item_id is not None and self.get_item_by_id(
                 item_id, start_at_root=True):
@@ -305,9 +269,8 @@ class HelpItem:
             if formatter is None:
                 formatter = self._formatter
 
-            new_item = self._new_item(
-                item_type, content, item_id, format_func, self,
-                self._current_indent, formatter)
+            new_item = item_type(
+                content, item_id, self, self._current_indent, formatter, *args)
             self._children.append(new_item)
 
         return new_item
@@ -315,7 +278,7 @@ class HelpItem:
     # Message formatting methods
     # ==========================
 
-    def format_help(self, levels=None, item_id=None) -> str:
+    def format(self, levels=None, item_id=None) -> str:
         """Join the help messages of each item.
 
         This method will return the help messages from all descendants of
@@ -349,7 +312,7 @@ class HelpItem:
 
     def get_items(
             self, levels=None, item_id=None
-            ) -> Generator["HelpItem", None, None]:
+            ) -> Generator["RootItem", None, None]:
         """Recursively yield nested items.
 
         Args:
@@ -385,8 +348,8 @@ class HelpItem:
         return help_msg
 
     def _depth_search(
-            self, item: "HelpItem", levels=None, counter=0
-            ) -> Generator["HelpItem", None, None]:
+            self, item: "RootItem", levels=None, counter=0
+            ) -> Generator["RootItem", None, None]:
         """Recursively yield nested items.
 
         Args:
@@ -408,7 +371,7 @@ class HelpItem:
 
     def get_item_by_id(
             self, item_id: str, start_at_root=False, raising=False
-            ) -> "HelpItem":
+            ) -> "RootItem":
         """Get an item by its ID.
 
         Args:
@@ -433,7 +396,7 @@ class HelpItem:
             raise ValueError(
                 "an item with the ID '{0}' does not exist".format(item_id))
 
-    def _get_root_item(self) -> "HelpItem":
+    def _get_root_item(self) -> "RootItem":
         """Get the root item in the item tree.
 
         Returns:
@@ -455,60 +418,6 @@ class HelpItem:
         yield
         self._current_indent -= self._formatter.indent_increment
 
-    @staticmethod
-    def parse_name_markup(name_string: str) -> MarkupPositions:
-        """Get the position of markup for the definition name.
-
-        Returns:
-            The positions of the substrings wrapped by the markup characters.
-        """
-        return MarkupPositions([(name_string, 0)], [])
-
-    @staticmethod
-    def parse_args_markup(args_string: str) -> MarkupPositions:
-        """Get the position of markup for the definition argument string.
-
-        Returns:
-            The positions of the substrings wrapped by the markup characters.
-        """
-        positions = MarkupPositions([], [])
-        for word_match in ARG_REGEX.finditer(args_string):
-            match_counter = 0
-            match_string = word_match.group()
-            for match_instance in re.finditer(
-                    re.escape(match_string), args_string):
-                if match_instance.span() == word_match.span():
-                    positions.em.append((match_string, match_counter))
-                match_counter += 1
-
-        return positions
-
-    @staticmethod
-    def parse_msg_markup(args: str, text: str) -> MarkupPositions:
-        """Get the positions of markup for the definition message.
-
-        This method only formats arguments surrounded by non-word characters.
-
-        Args:
-            text: The string to have markup added to.
-            args: The argument string to get arguments from.
-
-        Returns:
-            The positions of the substrings wrapped by the markup characters.
-        """
-        positions = MarkupPositions([], [])
-        for arg in ARG_REGEX.findall(args):
-            for word_match in re.finditer(
-                    r"(?<!\w){}(?!\w)".format(re.escape(arg)), text):
-                match_counter = 0
-                match_string = word_match.group()
-                for match_instance in re.finditer(
-                        re.escape(match_string), text):
-                    if match_instance.span() == word_match.span():
-                        positions.em.append((match_string, match_counter))
-                    match_counter += 1
-
-        return positions
 
     @staticmethod
     def parse_manual_markup(text: str) -> Tuple[str, MarkupPositions]:
@@ -594,17 +503,17 @@ class HelpItem:
     def _apply_markup(
             self, text: str, manual_positions: MarkupPositions,
             auto_positions: MarkupPositions) -> str:
-        """Apply markup to text at certain positions.
+        """Apply ANSI escape sequences to text at certain positions.
 
         Args:
-            text: The text to apply markup to.
+            text: The text to apply the markup to.
             manual_positions: The positions of substrings to apply manual
                 markup to.
             auto_positions: The positions of substrings to apply auto markup
                 to.
 
         Returns:
-            The original text with markup added.
+            The original text with ANSI escape sequences added.
         """
         if manual_positions is None:
             manual_positions = MarkupPositions([], [])
@@ -664,6 +573,125 @@ class HelpItem:
 
         return wrapper
 
+
+class TextItem(RootItem):
+    def __init__(
+            self, content: Any, item_id: Optional[str], parent: RootItem,
+            starting_indent: int, formatter: Formatter) -> None:
+        self.content = content
+        self.id = item_id
+        self._format_func = self._format
+        self._parent = parent
+        self._current_indent = starting_indent
+        self._formatter = formatter
+        self._children = []
+
+    @staticmethod
+    def _format(self, content: str) -> str:
+        """Format plain text for the help message.
+
+        Args:
+            self: The instance of the calling item.
+            content: The text to be formatted.
+
+        Returns:
+            The formatted text as a string.
+        """
+        if self._formatter.manual_markup:
+            output_text, positions = self.parse_manual_markup(content)
+        else:
+            output_text, positions = content, None
+
+        wrapper = self._get_wrapper()
+        output_text = wrapper.fill(output_text)
+        output_text = self._apply_markup(output_text, positions, None)
+        return output_text
+
+
+class DefinitionItem(RootItem):
+    def __init__(
+            self, content: Any, item_id: Optional[str], parent: RootItem,
+            starting_indent: int, formatter: Formatter, style: str
+            ) -> None:
+        if style in ["heading", "he"]:
+            format_func = functools.partial(
+                self._format_heading, aligned=False)
+        elif style in ["heading_aligned", "ha"]:
+            format_func = functools.partial(
+                self._format_heading, aligned=True)
+        elif style in ["inline", "in"]:
+            format_func = functools.partial(
+                self._format_inline, aligned=False)
+        elif style in ["inline_aligned", "ia"]:
+            format_func = functools.partial(
+                self._format_inline, aligned=True)
+        else:
+            raise ValueError(
+                "unrecognized definition style '{}'".format(style))
+
+        self.content = content
+        self.id = item_id
+        self._format_func = format_func
+        self._parent = parent
+        self._current_indent = starting_indent
+        self._formatter = formatter
+        self._children = []
+
+    @staticmethod
+    def parse_name_markup(name_string: str) -> MarkupPositions:
+        """Get the position of markup for the definition name.
+
+        Returns:
+            The positions of the substrings that should have markup applied.
+        """
+        return MarkupPositions([(name_string, 0)], [])
+
+    @staticmethod
+    def parse_args_markup(args_string: str) -> MarkupPositions:
+        """Get the position of markup for the definition argument string.
+
+        Returns:
+            The positions of the substrings that should have markup applied.
+        """
+        positions = MarkupPositions([], [])
+        for word_match in ARG_REGEX.finditer(args_string):
+            match_counter = 0
+            match_string = word_match.group()
+            for match_instance in re.finditer(
+                    re.escape(match_string), args_string):
+                if match_instance.span() == word_match.span():
+                    positions.em.append((match_string, match_counter))
+                match_counter += 1
+
+        return positions
+
+    @staticmethod
+    def parse_msg_markup(args: str, text: str) -> MarkupPositions:
+        """Get the positions of markup for the definition message.
+
+        This method only formats arguments surrounded by non-word characters.
+
+        Args:
+            text: The string to have markup added to.
+            args: The argument string to get arguments from.
+
+        Returns:
+            The positions of the substrings that should have markup applied.
+        """
+        positions = MarkupPositions([], [])
+        for arg in ARG_REGEX.findall(args):
+            for word_match in re.finditer(
+                    r"(?<!\w){}(?!\w)".format(re.escape(arg)), text):
+                match_counter = 0
+                match_string = word_match.group()
+                for match_instance in re.finditer(
+                        re.escape(match_string), text):
+                    if match_instance.span() == word_match.span():
+                        positions.em.append((match_string, match_counter))
+                    match_counter += 1
+
+        return positions
+
     def _get_aligned_buffer(self) -> int:
         """Get the length of the buffer to leave before aligned messages.
 
@@ -677,9 +705,9 @@ class HelpItem:
         """
         inline_content = (
             item.content for item in self._parent._children
-            if item.type == "definition"
-            and item._format_func.func is self._format_inline_def
-            and item._format_func.keywords["aligned"] is True)
+            if isinstance(item, type(self))
+               and item._format_func.func is self._format_inline
+               and item._format_func.keywords["aligned"] is True)
         try:
             longest = max(
                 len(" ".join([string for string in (name, args) if string]))
@@ -745,28 +773,7 @@ class HelpItem:
         return output_sig
 
     @staticmethod
-    def _format_text(self, content: str) -> str:
-        """Format plain text for the help message.
-
-        Args:
-            self: The instance of the calling item.
-            content: The text to be formatted.
-
-        Returns:
-            The formatted text as a string.
-        """
-        if self._formatter.manual_markup:
-            output_text, positions = self.parse_manual_markup(content)
-        else:
-            output_text, positions = content, None
-
-        wrapper = self._get_wrapper()
-        output_text = wrapper.fill(output_text)
-        output_text = self._apply_markup(output_text, positions, None)
-        return output_text
-
-    @staticmethod
-    def _format_inline_def(
+    def _format_inline(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
         """Format an 'inline' definition for the help message.
 
@@ -791,7 +798,7 @@ class HelpItem:
         else:
             sig_buffer = (len(
                 " ".join([string for string in (name, args) if string]))
-                + self._formatter.inline_space)
+                          + self._formatter.inline_space)
 
         output_sig = self._create_sig(
             name, args, name_positions, args_positions, sig_buffer)
@@ -811,7 +818,7 @@ class HelpItem:
         return output_sig + output_msg[sig_buffer:]
 
     @staticmethod
-    def _format_heading_def(
+    def _format_heading(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
         """Format a 'heading' definition for the help message.
 

@@ -1,7 +1,7 @@
 API
 ===
- .. autoclass:: linotype.HelpFormatter
+.. autoclass:: linotype.Formatter
     :members:
 
- .. autoclass:: linotype.HelpItem
-    :members: add_text, add_definition, format_help
+.. autoclass:: linotype.RootItem
+    :members: add_text, add_definition, format
