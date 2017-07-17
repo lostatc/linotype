@@ -21,21 +21,19 @@ import re
 import textwrap
 import functools
 import contextlib
-from typing import (
-    Any, Callable, Tuple, Generator, Optional, NamedTuple, List, Type)
+import collections
+from typing import Any, Tuple, Generator, Optional, NamedTuple, List, Type
 
 from docutils.frontend import OptionParser
 from docutils.parsers.rst import Parser
 from docutils.parsers.rst.states import Inliner
 
+from linotype.ansi import ansi_format
+
 ARG_REGEX = re.compile(r"([\w-]+)")
 
-MARKUP_CHARS = NamedTuple(
-    "MarkupChars",
-    [
-        ("strong", Tuple[str, str]),
-        ("em", Tuple[str, str])
-        ])(("**", "**"), ("*", "*"))
+MARKUP_CHARS = collections.namedtuple(
+    "MarkupChars", ["strong", "em"])(("**", "**"), ("*", "*"))
 
 # This keeps track of the positions of marked-up substrings in a string.
 # Each tuple contains the substring and the instance of that substring for
@@ -48,21 +46,6 @@ MarkupPositions = NamedTuple(
 class Formatter:
     """Control how terminal output is formatted.
 
-    Args:
-        indent_increment: The number of spaces to increase/decrease the indent
-            level by for each level.
-        inline_space: The number of spaces to leave between the argument string
-            and message of each definition when they are on the same line.
-        width: The number of columns at which to wrap text in the help message.
-        auto_markup: Automatically apply 'strong' and 'emphasized' formatting
-            to certain text in the output.
-        manual_markup: Parse reST 'strong' and 'emphasis' inline markup.
-        visible: Make the text visible in the output.
-        strong: The strings to print before and after strong text (default is
-            ANSI bold). These are ignored when wrapping text.
-        em: The strings to print before and after emphasized text (default is
-            ANSI underlined). These are ignored when wrapping text.
-
     Attributes:
         indent_increment: The number of spaces to increase/decrease the indent
             level by for each level.
@@ -71,17 +54,21 @@ class Formatter:
         width: The number of columns at which to wrap text in the help message.
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
-        manual_markup: Parse reST 'strong' and 'emphasis' inline markup.
+        manual_markup: Parse reST 'strong' and 'emphasized' inline markup.
         visible: Make the text visible in the output.
-        strong: the strings to print before and after strong text (default is
-            ANSI bold). These are ignored when wrapping text.
-        em: The strings to print before and after emphasized text (default is
-            ANSI underlined). These are ignored when wrapping text.
+        strong: The markup to apply to 'strong' text. This accepts a 3-tuple
+            containing the foreground color, the background color and the
+            style. The foreground and background colors can be the name of an
+            ANSI color, an integer in the range 0-255 or a CSS-style hex value.
+            The style can be "bold", "underline" or a list containing both. Any
+            of these values can be None, which means no formatting.
+        em: The markup to apply to 'emphasized' text. This accepts the same
+            values as strong.
     """
     def __init__(
             self, indent_increment=4, inline_space=2, width=79,
             auto_markup=True, manual_markup=True, visible=True,
-            strong=("\33[1m", "\33[0m"), em=("\33[4m", "\33[0m")) -> None:
+            strong=(None, None, "bold"), em=(None, None, "underline")) -> None:
         self.indent_increment = indent_increment
         self.inline_space = inline_space
         self.width = width
@@ -521,11 +508,10 @@ class RootItem:
         if auto_positions is None:
             auto_positions = MarkupPositions([], [])
 
+        markup_spans = []
         for markup_type in ["strong", "em"]:
             combined_positions = []
 
-            # Add manual markup first so that it overrides automatic markup if
-            # they overlap.
             if self._formatter.manual_markup:
                 combined_positions += getattr(manual_positions, markup_type)
             if self._formatter.auto_markup:
@@ -538,14 +524,44 @@ class RootItem:
                     # This can occur when manual markup conflicts with
                     # automatic markup.
                     continue
-                text = (
-                    text[:match.start()]
-                    + getattr(self._formatter, markup_type)[0]
-                    + text[match.start():match.end()]
-                    + getattr(self._formatter, markup_type)[1]
-                    + text[match.end():])
+                markup_spans.append((match.span(), markup_type))
 
-        return text
+        markup_spans.sort(key=lambda x: x[0][1], reverse=True)
+        markup_spans.sort(key=lambda x: x[0][0])
+
+        # Get the positions of ANSI escape sequences in the text. Keep track of
+        # which sequences are still "open" so that the ends of other sequences
+        # don't close them. This allows for nested markup.
+        markup_sequences = []
+        open_sequences = []
+        for (start, end), markup_type in markup_spans:
+            start_sequence, end_sequence = ansi_format(
+                *getattr(self._formatter, markup_type))
+
+            open_sequences = [
+                (position, sequence) for position, sequence in open_sequences
+                if position > start]
+
+            markup_sequences.append((start, start_sequence))
+            markup_sequences.append((end, end_sequence))
+            markup_sequences += [
+                (end, sequence) for position, sequence in open_sequences]
+
+            open_sequences.append((end, start_sequence))
+
+        markup_sequences.sort(key=lambda x: x[0])
+
+        # Get a list of strings that will make up the output. This is the
+        # ordered ANSI escape sequences with the appropriate text between them.
+        prev_position = 0
+        text_sequences = []
+        for position, sequence in markup_sequences:
+            text_sequences.append(text[prev_position:position])
+            text_sequences.append(sequence)
+            prev_position = position
+        text_sequences.append(text[prev_position:])
+
+        return "".join(text_sequences)
 
     def _get_wrapper(
             self, add_initial=0, add_subsequent=0, drop_whitespace=True

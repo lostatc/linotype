@@ -32,9 +32,9 @@ def formatter():
     changed in the future without breaking the tests.
     """
     formatter = Formatter(
-        indent_increment=4, width=79, auto_markup=False,
-        manual_markup=False, visible=True, inline_space=2,
-        strong=("<strong>", "</strong>"), em=("<em>", "</em>"))
+        indent_increment=4, inline_space=2, width=79,
+        auto_markup=False, manual_markup=False, visible=True,
+        strong=(None, None, "bold"), em=(None, None, "underline"))
     return formatter
 
 
@@ -58,7 +58,7 @@ def test_text_manual_markup(formatter):
     root_item = RootItem(formatter)
     root_item.add_text("This text has *emphasized* and **strong** markup.")
     expected_output = textwrap.dedent("""\
-        This text has <em>emphasized</em> and <strong>strong</strong> markup.""")
+        This text has \x1b[4memphasized\x1b[0m and \x1b[1mstrong\x1b[0m markup.""")
 
     assert root_item.format() == expected_output
 
@@ -130,11 +130,11 @@ def test_definition_auto_markup(formatter):
     formatter.auto_markup = True
     root_item = RootItem(formatter)
     root_item.add_definition(
-        "diff", "[options] number1..number2 [files]",
+        "diff", "[options] number1..number2",
         "Compare the snapshots number1 and number2.", style="heading")
     expected_output = textwrap.dedent("""\
-        <strong>diff</strong> [<em>options</em>] <em>number1</em>..<em>number2</em> [<em>files</em>]
-            Compare the snapshots <em>number1</em> and <em>number2</em>.""")
+        \x1b[1mdiff\x1b[0m [\x1b[4moptions\x1b[0m] \x1b[4mnumber1\x1b[0m..\x1b[4mnumber2\x1b[0m
+            Compare the snapshots \x1b[4mnumber1\x1b[0m and \x1b[4mnumber2\x1b[0m.""")
 
     assert root_item.format() == expected_output
 
@@ -146,8 +146,8 @@ def test_definition_manual_markup(formatter):
     root_item.add_definition(
         "**--file**", "*FILE*", "Obtain patterns from *FILE*, one per line.")
     expected_output = textwrap.dedent("""\
-        <strong>--file</strong> <em>FILE</em>
-            Obtain patterns from <em>FILE</em>, one per line.""")
+        \x1b[1m--file\x1b[0m \x1b[4mFILE\x1b[0m
+            Obtain patterns from \x1b[4mFILE\x1b[0m, one per line.""")
 
     assert root_item.format() == expected_output
 
