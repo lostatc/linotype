@@ -1,3 +1,3 @@
 """Automatically format help messages."""
 
-from linotype.formatter import Formatter, RootItem
+from linotype.items import Formatter, RootItem

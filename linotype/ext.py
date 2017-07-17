@@ -29,7 +29,7 @@ from docutils.parsers.rst import Directive, Parser
 from docutils.parsers.rst.states import Inliner
 from docutils.parsers.rst.directives import unchanged, flag
 
-from linotype.formatter import (
+from linotype.items import (
     ARG_REGEX, RootItem, TextItem, DefinitionItem, MarkupPositions)
 
 
