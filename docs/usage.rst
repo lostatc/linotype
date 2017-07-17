@@ -26,7 +26,7 @@ prints a simple help message:
             "")
         return help_root
 
-    print(help_message().format_help())
+    print(help_message().format())
 
 Line wrapping, indentation, alignment and markup are all applied automatically
 according to attributes set in the **Formatter** object. Additionally, inline
