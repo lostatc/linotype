@@ -50,7 +50,7 @@ Split message into sections
 ---------------------------
 Instead of having your entire help message appear in one place in your
 **Sphinx** documentation, you may want to split it up into different sections.
-This can be accomplished using item IDs.
+This can be accomplished by assigning item IDs.
 
 .. code-block:: python
     :linenos:

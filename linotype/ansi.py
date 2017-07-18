@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with linotype.  If not, see <http://www.gnu.org/licenses/>.
 """
 import re
-from typing import Tuple, Union, Optional, Iterable
+from typing import Tuple, Union, Iterable
 
 ANSI_COLORS = {
     "black": 0, "red": 1, "green": 2, "yellow": 3, "blue": 4, "magenta": 5,
@@ -39,6 +39,9 @@ def _get_color_code(spec: Union[str, int], base: int):
         spec: The color specification to be parsed.
         base: The base value for color encoding.
 
+    Raises:
+        ValueError: The given color spec was unrecognized.
+
     Returns:
         The ANSI color code.
     """
@@ -46,7 +49,7 @@ def _get_color_code(spec: Union[str, int], base: int):
         return _ansi_join(base + 8, 5, spec)
     elif isinstance(spec, str):
         spec = spec.strip().lower()
-        hex_match = re.search(r"^#([0-9a-f]{6})$", spec)
+        hex_match = re.search(r"^#?([0-9a-f]{6})$", spec)
 
         if spec in ANSI_COLORS:
             return _ansi_join(base + ANSI_COLORS[spec])
@@ -65,9 +68,15 @@ def ansi_format(
     """Get the appropriate ANSI escape sequences based on input.
 
     Args:
-        fg: The foreground color or hex code.
-        bg: The background color or hex code.
-        style: The text style.
+        fg: The foreground color specification. This can be the name of an ANSI
+            color, an integer in the range 0-255 or a CSS-style hex value.
+        bg: The background color specification. This can be the name of an ANSI
+            color, an integer in the range 0-255 or a CSS-style hex value.
+        style: The text style. This can be one of "bold", "underline" or a list
+            containing both.
+
+    Raises:
+        ValueError: The given style was unrecognized.
 
     Returns:
         A tuple containing the starting and ending ANSI escape sequences.

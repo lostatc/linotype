@@ -1,4 +1,4 @@
-"""Format a help message.
+"""Define a tree of items.
 
 Copyright © 2017 Garrett Powell <garrett@gpowell.net>
 
@@ -51,7 +51,7 @@ class Formatter:
             level by for each level.
         inline_space: The number of spaces to leave between the argument string
             and message of each definition when they are on the same line.
-        width: The number of columns at which to wrap text in the help message.
+        width: The number of columns at which to wrap text in the text output.
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
         manual_markup: Parse reST 'strong' and 'emphasized' inline markup.
@@ -80,14 +80,14 @@ class Formatter:
 
 
 class RootItem:
-    """Format an item in a help message.
+    """Format an item in a text output.
 
-    This class allows for formatting a help message consisting of a tree of
+    This class allows for formatting text output consisting of a tree of
     "items". There are multiple types of items to choose from, and every
     item can contain zero or more other items. Each level of nested items
     increases the indentation level, and items at the same level are
-    displayed at the order in which they were created. A help message can be
-    printed starting at any point in the tree, and the output is
+    displayed at the order in which they were created. The text output can
+    be printed starting at any point in the tree, and the output is
     automatically formatted according to the formatter object passed in.
     Formatter objects can be passed in whenever a new item is created to
     affect its formatting.
@@ -99,7 +99,7 @@ class RootItem:
         formatter: The formatter object for the item tree.
 
     Attributes:
-        content: The content to display in the help message.
+        content: The content to display in the text output.
         id: The item ID.
         current_level: The current indentation level.
         _format_func: The function used to format the current content.
@@ -107,7 +107,7 @@ class RootItem:
         _current_indent: The number of spaces that the item is currently
             indented.
         _formatter: The formatter object for the item tree.
-        _children: A list of RootItem objects in the help message.
+        _children: A list of RootItem objects in the text output.
     """
     def __init__(self, formatter: Formatter) -> None:
         self.content = None
@@ -266,11 +266,11 @@ class RootItem:
     # ==========================
 
     def format(self, levels=None, item_id=None) -> str:
-        """Join the help messages of each item.
+        """Join the text output of each item.
 
-        This method will return the help messages from all descendants of
-        the root item as determined by the 'item_id' argument. Whether or
-        not the root item has parents, the output will be left-aligned and
+        This method will return the text output from all descendants of the
+        root item as determined by the 'item_id' argument. Whether or not
+        the root item has parents, the output will be left-aligned and
         wrapped accordingly.
 
         Args:
@@ -279,7 +279,7 @@ class RootItem:
                 current item.
 
         Returns:
-            The joined help message as a string.
+            The joined text outputs as a string.
         """
         # Dedent the output so that it's flush with the left edge.
         if item_id is None:
@@ -322,7 +322,7 @@ class RootItem:
         """Format the items belonging to this item.
 
         Returns:
-            A formatted help message as a string.
+            The formatted text output as a string.
         """
         if self.content and self._formatter.visible:
             # The formatting functions are static methods so that the
@@ -366,6 +366,9 @@ class RootItem:
             start_at_root: Begin searching at the root of the current item tree
                 instead of at the current item.
             raising: Raise an exception if an item is not found.
+
+        Raises:
+            ValueError: An item with the given item ID doesn't exist.
 
         Returns:
             An item corresponding to the ID.
@@ -603,7 +606,7 @@ class TextItem(RootItem):
 
     @staticmethod
     def _format(self, content: str) -> str:
-        """Format plain text for the help message.
+        """Format plain text for the text output.
 
         Args:
             self: The instance of the calling item.
@@ -788,7 +791,7 @@ class DefinitionItem(RootItem):
     @staticmethod
     def _format_inline(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
-        """Format an 'inline' definition for the help message.
+        """Format an 'inline' definition for the text output.
 
         Args:
             self: The instance of the calling item.
@@ -833,7 +836,7 @@ class DefinitionItem(RootItem):
     @staticmethod
     def _format_heading(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
-        """Format a 'heading' definition for the help message.
+        """Format a 'heading' definition for the text output.
 
         Args:
             self: The instance of the calling item.

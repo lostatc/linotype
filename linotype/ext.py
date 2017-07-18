@@ -119,7 +119,12 @@ class LinotypeDirective(Directive):
         "no_manual_markup": flag}
 
     def _retrieve_item(self) -> RootItem:
-        """Get the RootItem object from the given module or filepath."""
+        """Get the RootItem object from the given module or filepath.
+
+        Returns:
+            The output of the specified function from the specified module or
+            file.
+        """
         if "module" in self.options and "func" in self.options:
             # Import from given module.
             module_name = self.options["module"]
