@@ -594,13 +594,12 @@ class TextItem(RootItem):
     def __init__(
             self, content: Any, item_id: Optional[str], parent: RootItem,
             starting_indent: int, formatter: Formatter) -> None:
+        super().__init__(formatter)
         self.content = content
         self.id = item_id
         self._format_func = self._format
         self._parent = parent
         self._current_indent = starting_indent
-        self._formatter = formatter
-        self._children = []
 
     @staticmethod
     def _format(self, content: str) -> str:
@@ -627,8 +626,7 @@ class TextItem(RootItem):
 class DefinitionItem(RootItem):
     def __init__(
             self, content: Any, item_id: Optional[str], parent: RootItem,
-            starting_indent: int, formatter: Formatter, style: str
-            ) -> None:
+            starting_indent: int, formatter: Formatter, style: str) -> None:
         if style in ["heading", "he"]:
             format_func = functools.partial(
                 self._format_heading, aligned=False)
@@ -645,13 +643,12 @@ class DefinitionItem(RootItem):
             raise ValueError(
                 "unrecognized definition style '{}'".format(style))
 
+        super().__init__(formatter)
         self.content = content
         self.id = item_id
         self._format_func = format_func
         self._parent = parent
         self._current_indent = starting_indent
-        self._formatter = formatter
-        self._children = []
 
     @staticmethod
     def parse_term_markup(term_string: str) -> MarkupPositions:
