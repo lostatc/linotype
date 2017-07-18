@@ -31,7 +31,6 @@ from docutils.parsers.rst.states import Inliner
 from linotype.ansi import ansi_format
 
 ARG_REGEX = re.compile(r"([\w-]+)")
-
 MARKUP_CHARS = collections.namedtuple(
     "MarkupChars", ["strong", "em"])(("**", "**"), ("*", "*"))
 
@@ -86,14 +85,15 @@ class RootItem:
     "items". There are multiple types of items to choose from, and every
     item can contain zero or more other items. Each level of nested items
     increases the indentation level, and items at the same level are
-    displayed at the order in which they were created. The text output can
-    be printed starting at any point in the tree, and the output is
-    automatically formatted according to the formatter object passed in.
-    Formatter objects can be passed in whenever a new item is created to
-    affect its formatting.
+    displayed at the order in which they were created.
 
-    New child items can be created using one of the available public
-    methods, and new child items can be added using the '+=' operator.
+    The text output can be printed starting at any point in the tree,
+    and the output is automatically formatted according to the formatter
+    object passed in. Formatter objects can be passed in whenever a new item
+    is created to affect its formatting.
+
+    Every item can optionally be assigned a unique ID that can be referenced
+    in the Sphinx documentation.
 
     Args:
         formatter: The formatter object for the item tree.
@@ -117,31 +117,6 @@ class RootItem:
         self._current_indent = 0
         self._formatter = formatter
         self._children = []
-
-    def __iadd__(self, other: "RootItem") -> "RootItem":
-        """Add another RootItem object to the list of items.
-
-        Args:
-            other: The RootItem object to add.
-
-        Raises:
-            TypeError: The input was an unsupported type.
-        """
-        if isinstance(other, type(self)):
-            for item in other.get_items():
-                item._current_indent += self._formatter.indent_increment
-            if other is type(self):
-                for item in other._children:
-                    # Exclude the empty root-level item so that formatting only
-                    # to a certain depth works as expected.
-                    self._children.append(item)
-            else:
-                self._children.append(other)
-            return self
-        else:
-            raise TypeError(
-                "unsupported operand type(s) for +=: '{0}' and '{1}'".format(
-                    type(self), type(other)))
 
     @property
     def current_level(self) -> int:
