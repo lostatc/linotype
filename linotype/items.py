@@ -44,7 +44,7 @@ MarkupPositions = NamedTuple(
 
 
 class Formatter:
-    """Control how terminal output is formatted.
+    """Control how the text output is formatted.
 
     Attributes:
         indent_increment: The number of spaces to increase/decrease the indent
@@ -170,20 +170,20 @@ class RootItem:
         return self._add_item(TextItem, text, item_id, formatter)
 
     def add_definition(
-            self, name: str, args: str, msg: str, style="heading",
+            self, term: str, args: str, msg: str, style="heading",
             formatter=None, item_id=None) -> "RootItem":
         """Add a definition to be printed.
 
         This item displays a formatted definition in one of multiple styles.
-        Definitions consist of a name, an argument string and a message,
+        Definitions consist of a term, an argument string and a message,
         any of which can be blank.
 
         Args:
-            name: The command, option, etc. to be defined. If auto markup is
-                enabled, this is strong in the terminal output.
+            term: The command, option, etc. to be defined. If auto markup is
+                enabled, this is strong in the text output.
             args: The list of arguments for the thing being defined as a
-                single string. If auto markup is enabled, arguments are
-                emphasized in the terminal output.
+                single string. If auto markup is enabled, consecutive strings
+                of unicode word characters are emphasized in the text output.
             msg: A description of the thing being defined, with arguments
                 that appear in the argument string emphasized if auto markup
                 is enabled.
@@ -191,20 +191,20 @@ class RootItem:
                 and a short name, either of which can be used.
 
                 "heading", "he": Display the message on a separate line from
-                the name and argument string.
+                the term and argument string.
 
                 "heading_aligned", "ha": Display the message on a separate
-                line from the name and argument string and align the message
+                line from the term and argument string and align the message
                 with those of all other definitions that belong to the same
                 parent item and have a style of "inline_aligned". Use a
                 hanging indent if the message is too long.
 
                 "inline", "in": Display the message on the same line as the
-                name and argument string. Use a hanging indent if the
+                term and argument string. Use a hanging indent if the
                 message is too long.
 
                 "inline_aligned", "ia": Display the message on the same line
-                as the name and argument string and align the message with
+                as the term and argument string and align the message with
                 those of all other definitions that belong to the same
                 parent item and have the style 'inline_aligned'. Use a
                 hanging indent if the message is too long.
@@ -221,7 +221,7 @@ class RootItem:
             The new RootItem object.
         """
         return self._add_item(
-            DefinitionItem, [name, args, msg], item_id, formatter, style)
+            DefinitionItem, [term, args, msg], item_id, formatter, style)
 
     def _add_item(
             self, item_type: Type["RootItem"], content: Any,
@@ -413,9 +413,9 @@ class RootItem:
         This method only parses 'strong' and 'emphasized' inline markup.
 
         Example:
-            >>> parse_manual_markup("*Is* markup only **markup**?")
-            ("Is markup only markup?", MarkupPositions(
-                strong=[("markup", 1)], em=[("Is", 0)]))
+            >>> parse_manual_markup("The **ants** were marching two by *two*.")
+            ("The ants were marching two by two.", MarkupPositions(
+                strong=[("ants", 0)], em=[("two", 1)]))
 
         Args:
             text: The text containing reST inline markup.
@@ -654,13 +654,13 @@ class DefinitionItem(RootItem):
         self._children = []
 
     @staticmethod
-    def parse_name_markup(name_string: str) -> MarkupPositions:
-        """Get the position of markup for the definition name.
+    def parse_term_markup(term_string: str) -> MarkupPositions:
+        """Get the position of markup for the definition term.
 
         Returns:
             The positions of the substrings that should have markup applied.
         """
-        return MarkupPositions([(name_string, 0)], [])
+        return MarkupPositions([(term_string, 0)], [])
 
     @staticmethod
     def parse_args_markup(args_string: str) -> MarkupPositions:
@@ -711,7 +711,7 @@ class DefinitionItem(RootItem):
     def _get_aligned_buffer(self) -> int:
         """Get the length of the buffer to leave before aligned messages.
 
-        This value is the length of the longest signature (name + args) of
+        This value is the length of the longest signature (term + args) of
         any sibling items that are definitions with the 'inline_aligned'
         style plus the inline buffer space. If there are none, it is the
         indentation increment.
@@ -726,8 +726,8 @@ class DefinitionItem(RootItem):
                and item._format_func.keywords["aligned"] is True)
         try:
             longest = max(
-                len(" ".join([string for string in (name, args) if string]))
-                for name, args, msg in inline_content)
+                len(" ".join([string for string in (term, args) if string]))
+                for term, args, msg in inline_content)
             longest += self._formatter.inline_space
         except ValueError:
             # There are no siblings that are definitions with the
@@ -737,18 +737,18 @@ class DefinitionItem(RootItem):
         return longest
 
     def _create_sig(
-            self, name: str, args: str, name_positions: MarkupPositions,
+            self, term: str, args: str, term_positions: MarkupPositions,
             args_positions: MarkupPositions, sig_buffer: int) -> str:
         """Create a signature for a definition.
 
-        A 'signature' is the concatenation of the definition's name and
+        A 'signature' is the concatenation of the definition's term and
         argument string.
 
         Args:
-            name: The name to be defined.
+            term: The term to be defined.
             args: The argument string for the definition.
-            name_positions: The positions at which to insert markup for the
-                name string.
+            term_positions: The positions at which to insert markup for the
+                term string.
             args_positions: The positions at which to insert markup for the
                 argument string.
             sig_buffer: The amount of space there should be between the
@@ -757,7 +757,7 @@ class DefinitionItem(RootItem):
         Returns:
             The signature string for the definition.
         """
-        name_buffer = len(name)
+        term_buffer = len(term)
 
         # Markup must be added after all text formatting has occurred
         # because the markup strings should be ignored when wrapping the
@@ -765,25 +765,25 @@ class DefinitionItem(RootItem):
         # definition separately, spaces are used as filler in certain places
         # so that the text can be wrapped properly before the real text is
         # substituted.
-        auto_name_positions = self.parse_name_markup(name)
+        auto_term_positions = self.parse_term_markup(term)
         auto_args_positions = self.parse_args_markup(args)
 
         wrapper = self._get_wrapper(
             add_initial=-self._formatter.indent_increment,
             drop_whitespace=False)
         output_args = "{0:<{1}}".format(
-            " "*(name_buffer + 1) + args, sig_buffer)
+            " "*(term_buffer + 1) + args, sig_buffer)
         output_args = wrapper.fill(output_args)
 
         wrapper = self._get_wrapper()
-        output_name = wrapper.fill(name)
+        output_term = wrapper.fill(term)
         output_sig = (
             wrapper.initial_indent
             + self._apply_markup(
-                output_name[self._current_indent:], name_positions,
-                auto_name_positions)
+                output_term[self._current_indent:], term_positions,
+                auto_term_positions)
             + self._apply_markup(
-                output_args[name_buffer:], args_positions,
+                output_args[term_buffer:], args_positions,
                 auto_args_positions))
 
         return output_sig
@@ -795,29 +795,29 @@ class DefinitionItem(RootItem):
 
         Args:
             self: The instance of the calling item.
-            content: A tuple containing the name, args and message for the
+            content: A tuple containing the term, args and message for the
                 definition.
 
         Returns:
             The formatted definition as a string.
         """
-        name, args, msg = content
+        term, args, msg = content
         if self._formatter.manual_markup:
-            name, name_positions = self.parse_manual_markup(name)
+            term, term_positions = self.parse_manual_markup(term)
             args, args_positions = self.parse_manual_markup(args)
             msg, msg_positions = self.parse_manual_markup(msg)
         else:
-            name_positions = args_positions = msg_positions = None
+            term_positions = args_positions = msg_positions = None
 
         if aligned:
             sig_buffer = self._get_aligned_buffer()
         else:
             sig_buffer = (len(
-                " ".join([string for string in (name, args) if string]))
+                " ".join([string for string in (term, args) if string]))
                           + self._formatter.inline_space)
 
         output_sig = self._create_sig(
-            name, args, name_positions, args_positions, sig_buffer)
+            term, args, term_positions, args_positions, sig_buffer)
 
         subsequent_indent = self._formatter.indent_increment
         if aligned:
@@ -840,22 +840,22 @@ class DefinitionItem(RootItem):
 
         Args:
             self: The instance of the calling item.
-            content: A tuple containing the name, args and message for the
+            content: A tuple containing the term, args and message for the
                 definition.
 
         Returns:
             The formatted definition as a string.
         """
-        name, args, msg = content
+        term, args, msg = content
         if self._formatter.manual_markup:
-            name, name_positions = self.parse_manual_markup(name)
+            term, term_positions = self.parse_manual_markup(term)
             args, args_positions = self.parse_manual_markup(args)
             msg, msg_positions = self.parse_manual_markup(msg)
         else:
-            name_positions = args_positions = msg_positions = None
+            term_positions = args_positions = msg_positions = None
 
         output_sig = self._create_sig(
-            name, args, name_positions, args_positions, 0)
+            term, args, term_positions, args_positions, 0)
 
         if not msg:
             return output_sig

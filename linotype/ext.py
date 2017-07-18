@@ -273,22 +273,22 @@ class LinotypeDirective(Directive):
                 nodes.definition_list_item(
                     "", nodes.term(), nodes.definition())]
         elif isinstance(item, DefinitionItem):
-            name, args, msg = item.content
+            term, args, msg = item.content
             if "no_manual_markup" in self.options:
-                name_positions = args_positions = msg_positions = None
+                term_positions = args_positions = msg_positions = None
             else:
-                name, name_positions = item.parse_manual_markup(name)
+                term, term_positions = item.parse_manual_markup(term)
                 args, args_positions = item.parse_manual_markup(args)
                 msg, msg_positions = item.parse_manual_markup(msg)
 
-            auto_name_positions = item.parse_name_markup(name)
+            auto_term_positions = item.parse_term_markup(term)
             auto_args_positions = item.parse_args_markup(args)
             auto_msg_positions = item.parse_msg_markup(args, msg)
 
             node = [nodes.definition_list_item(
                     "", nodes.term(
                         "", "", *self._apply_markup(
-                            name, name_positions, auto_name_positions),
+                            term, term_positions, auto_term_positions),
                         nodes.Text(" "),
                         *self._apply_markup(
                             args, args_positions, auto_args_positions)),
