@@ -103,7 +103,7 @@ class Formatter:
         self.em = em
 
 
-class RootItem:
+class Item:
     """Format an item in a text output.
 
     This class allows for formatting text output consisting of a tree of
@@ -132,7 +132,7 @@ class RootItem:
         _current_indent: The number of spaces that the item is currently
             indented.
         _formatter: The formatter object for the item tree.
-        _children: A list of RootItem objects in the text output.
+        _children: A list of Item objects in the text output.
     """
     def __init__(self, formatter: Formatter) -> None:
         self.content = None
@@ -151,7 +151,7 @@ class RootItem:
     # Message building methods
     # ========================
 
-    def add_text(self, text: str, formatter=None, item_id=None) -> "RootItem":
+    def add_text(self, text: str, formatter=None, item_id=None) -> "Item":
         """Add a text item to be printed.
 
         This item displays the given text wrapped to the given width.
@@ -165,13 +165,13 @@ class RootItem:
                 Sphinx documentation.
 
         Returns:
-            The new RootItem object.
+            The new Item object.
         """
         return self._add_item(TextItem, text, item_id, formatter)
 
     def add_definition(
             self, term: str, args: str, msg: str, style=DefStyle.BLOCK,
-            formatter=None, item_id=None) -> "RootItem":
+            formatter=None, item_id=None) -> "Item":
         """Add a definition to be printed.
 
         This item displays a formatted definition in one of multiple styles.
@@ -197,15 +197,15 @@ class RootItem:
                 Sphinx documentation.
 
         Returns:
-            The new RootItem object.
+            The new Item object.
         """
         return self._add_item(
             DefinitionItem, [term, args, msg], item_id, formatter, style)
 
     def _add_item(
-            self, item_type: Type["RootItem"], content: Any,
+            self, item_type: Type["Item"], content: Any,
             item_id: Optional[str], formatter: Optional[Formatter], *args
-            ) -> "RootItem":
+            ) -> "Item":
         """Add a new item under the current item.
 
         Args:
@@ -221,7 +221,7 @@ class RootItem:
             ValueError: The given item ID is already in use.
 
         Returns:
-            The new RootItem object.
+            The new Item object.
         """
         if item_id is not None and self.get_item_by_id(
                 item_id, start_at_root=True):
@@ -278,7 +278,7 @@ class RootItem:
 
     def get_items(
             self, levels=None, item_id=None
-            ) -> Generator["RootItem", None, None]:
+            ) -> Generator["Item", None, None]:
         """Recursively yield nested items.
 
         Args:
@@ -314,8 +314,8 @@ class RootItem:
         return help_msg
 
     def _depth_search(
-            self, item: "RootItem", levels=None, counter=0
-            ) -> Generator["RootItem", None, None]:
+            self, item: "Item", levels=None, counter=0
+            ) -> Generator["Item", None, None]:
         """Recursively yield nested items.
 
         Args:
@@ -337,7 +337,7 @@ class RootItem:
 
     def get_item_by_id(
             self, item_id: str, start_at_root=False, raising=False
-            ) -> "RootItem":
+            ) -> "Item":
         """Get an item by its ID.
 
         Args:
@@ -365,7 +365,7 @@ class RootItem:
             raise ValueError(
                 "an item with the ID '{0}' does not exist".format(item_id))
 
-    def _get_root_item(self) -> "RootItem":
+    def _get_root_item(self) -> "Item":
         """Get the root item in the item tree.
 
         Returns:
@@ -572,9 +572,9 @@ class RootItem:
         return wrapper
 
 
-class TextItem(RootItem):
+class TextItem(Item):
     def __init__(
-            self, content: Any, item_id: Optional[str], parent: RootItem,
+            self, content: Any, item_id: Optional[str], parent: Item,
             starting_indent: int, formatter: Formatter) -> None:
         super().__init__(formatter)
         self.content = content
@@ -605,9 +605,9 @@ class TextItem(RootItem):
         return output_text
 
 
-class DefinitionItem(RootItem):
+class DefinitionItem(Item):
     def __init__(
-            self, content: Any, item_id: Optional[str], parent: RootItem,
+            self, content: Any, item_id: Optional[str], parent: Item,
             starting_indent: int, formatter: Formatter, style: DefStyle
             ) -> None:
         if style is DefStyle.BLOCK:

@@ -21,7 +21,7 @@ import textwrap
 
 import pytest
 
-from linotype import DefStyle, Formatter, RootItem
+from linotype import DefStyle, Formatter, Item
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ def formatter():
 
 def test_text_formatting(formatter):
     """Text items format properly."""
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_text(
         "This is a long string of text that must be wrapped properly. No "
         "markup is applied, and the whole thing is indented to the same "
@@ -55,7 +55,7 @@ def test_text_formatting(formatter):
 def test_text_manual_markup(formatter):
     """Manual markup can be applied to text items."""
     formatter.manual_markup = True
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_text("This text has *emphasized* and **strong** markup.")
     expected_output = textwrap.dedent("""\
         This text has \x1b[4memphasized\x1b[0m and \x1b[1mstrong\x1b[0m markup.""")
@@ -65,7 +65,7 @@ def test_text_manual_markup(formatter):
 
 def test_definition_block_formatting(formatter):
     """The BLOCK style of definition items format properly."""
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_definition(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.", style=DefStyle.BLOCK)
@@ -78,7 +78,7 @@ def test_definition_block_formatting(formatter):
 
 def test_definition_inline_formatting(formatter):
     """The INLINE style of definition items format properly."""
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_definition(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.", style=DefStyle.INLINE)
@@ -91,7 +91,7 @@ def test_definition_inline_formatting(formatter):
 
 def test_definition_overflow_formatting(formatter):
     """The OVERFLOW style of definition items format properly."""
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_definition(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.",
@@ -109,7 +109,7 @@ def test_definition_overflow_formatting(formatter):
 
 def test_definition_aligned_formatting(formatter):
     """The ALIGNED style of definition items format properly."""
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_definition(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.",
@@ -128,7 +128,7 @@ def test_definition_aligned_formatting(formatter):
 def test_definition_auto_markup(formatter):
     """Markup is automatically applied to definitions."""
     formatter.auto_markup = True
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_definition(
         "diff", "[options] number1..number2",
         "Compare the snapshots number1 and number2.", style=DefStyle.BLOCK)
@@ -142,7 +142,7 @@ def test_definition_auto_markup(formatter):
 def test_definition_manual_markup(formatter):
     """Manual markup can be applied to definition items."""
     formatter.manual_markup = True
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_definition(
         "**--file**", "*FILE*", "Obtain patterns from *FILE*, one per line.")
     expected_output = textwrap.dedent("""\
@@ -154,7 +154,7 @@ def test_definition_manual_markup(formatter):
 
 def test_nested_items_indent(formatter):
     """Nested items increase the indentation level."""
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     first_level = root_item.add_text("This is the first level of text.")
     second_level = first_level.add_text("This is the second level of text.")
     second_level.add_text("This is the third level of text.")
@@ -170,7 +170,7 @@ def test_nested_items_indent(formatter):
 
 def test_nested_items_limit(formatter):
     """The number of levels of nested items to display can be limited."""
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     first_level = root_item.add_text("This is the first level of text.")
     first_level.add_text("This is the second level of text.")
     expected_output = "This is the first level of text."
@@ -181,7 +181,7 @@ def test_nested_items_limit(formatter):
 def test_change_indent_increment(formatter):
     """Changes to the indentation are reflected in the output."""
     formatter.indent_increment = 2
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     first_level = root_item.add_text("This is the first level of text.")
     first_level.add_text("This is the second level of text.")
     expected_output = textwrap.dedent("""\
@@ -194,7 +194,7 @@ def test_change_indent_increment(formatter):
 def test_change_width(formatter):
     """Changes to the text width are reflected in the output."""
     formatter.width = 99
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_text(
         "This is a long string of text that must be wrapped properly. No "
         "markup is applied, and the whole thing is indented to the same "
@@ -209,7 +209,7 @@ def test_change_width(formatter):
 def test_change_visible(formatter):
     """Items with the 'visible' flag set to 'False' don't appear."""
     formatter.visible = False
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_text("This text is invisible.")
 
     assert root_item.format() == ""
@@ -218,7 +218,7 @@ def test_change_visible(formatter):
 def test_change_definition_buffer(formatter):
     """Changes to the definition buffer are reflected in the output."""
     formatter.definition_buffer = 4
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_definition(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.", style=DefStyle.INLINE)
@@ -231,7 +231,7 @@ def test_change_definition_buffer(formatter):
 
 def test_duplicate_ids(formatter):
     """Adding items with duplicate item IDs raises an exception."""
-    root_item = RootItem(formatter)
+    root_item = Item(formatter)
     root_item.add_text("foo", item_id="duplicate")
     with pytest.raises(ValueError):
         root_item.add_text("bar", item_id="duplicate")

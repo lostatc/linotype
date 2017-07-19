@@ -6,5 +6,5 @@ API
 .. autoclass:: linotype.Formatter
     :members:
 
-.. autoclass:: linotype.RootItem
+.. autoclass:: linotype.Item
     :members: add_text, add_definition, format

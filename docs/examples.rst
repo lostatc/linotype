@@ -10,11 +10,11 @@ latter style is intended for options that are too long to otherwise fit.
 .. code-block:: python
     :linenos:
 
-    from linotype import DefStyle, Formatter, RootItem
+    from linotype import DefStyle, Formatter, Item
 
     def help_message():
         formatter = Formatter()
-        root_item = RootItem(formatter)
+        root_item = Item(formatter)
 
         root_item.add_definition(
             "-q, --quiet", "",
@@ -54,11 +54,11 @@ This can be accomplished by assigning item IDs.
 .. code-block:: python
     :linenos:
 
-    from linotype import Formatter, RootItem
+    from linotype import Formatter, Item
 
     def help_message():
         formatter = Formatter()
-        root_item = RootItem(formatter)
+        root_item = Item(formatter)
 
         usage = root_item.add_text("Usage:", item_id="usage")
         usage.add_definition(
@@ -115,11 +115,11 @@ invisible via a **Formatter** class. The first method is shown below.
 .. code-block:: python
     :linenos:
 
-    from linotype import Formatter, RootItem
+    from linotype import Formatter, Item
 
     def help_message():
         formatter = Formatter()
-        root_item = RootItem(formatter)
+        root_item = Item(formatter)
 
         commands = root_item.add_text("Commands:")
 

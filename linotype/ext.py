@@ -30,7 +30,7 @@ from docutils.parsers.rst.states import Inliner
 from docutils.parsers.rst.directives import unchanged, flag
 
 from linotype.items import (
-    ARG_REGEX, RootItem, TextItem, DefinitionItem, MarkupPositions)
+    ARG_REGEX, Item, TextItem, DefinitionItem, MarkupPositions)
 
 
 def _parse_definition_list(
@@ -73,14 +73,14 @@ def _parse_definition_list(
 
 
 def _extend_item_content(
-        definitions: Dict[str, Tuple[str, str]], root_item: RootItem
+        definitions: Dict[str, Tuple[str, str]], root_item: Item
         ) -> None:
     """Modify the content of the item tree based on the definitions provided.
     
     Args:
         definitions: A dict where keys are item IDs and values are tuples
             containing the classifier and the content as text.
-        root_item: The RootItem object to be modified in-place.
+        root_item: The Item object to be modified in-place.
     """
     for term, (classifier, new_content) in definitions.items():
         item = root_item.get_item_by_id(term, raising=True)
@@ -118,8 +118,8 @@ class LinotypeDirective(Directive):
         "no_auto_markup": flag,
         "no_manual_markup": flag}
 
-    def _retrieve_item(self) -> RootItem:
-        """Get the RootItem object from the given module or filepath.
+    def _retrieve_item(self) -> Item:
+        """Get the Item object from the given module or filepath.
 
         Returns:
             The output of the specified function from the specified module or
@@ -251,11 +251,11 @@ class LinotypeDirective(Directive):
 
         return parse_top_level(markup_spans, (0, len(text)))
 
-    def _parse_item(self, item: RootItem) -> List[nodes.Node]:
-        """Convert a RootItem object to a docutils Node object.
+    def _parse_item(self, item: Item) -> List[nodes.Node]:
+        """Convert an Item object to a docutils Node object.
 
         Args:
-            item: The RootItem object to convert to a Node object.
+            item: The Item object to convert to a Node object.
 
         Raises:
             ValueError: The type of the given item was not recognized.
@@ -306,18 +306,18 @@ class LinotypeDirective(Directive):
 
         return node
 
-    def _parse_tree(self, root_item: RootItem) -> nodes.Node:
-        """Recursively iterate over a RootItem object to generate Node objects.
+    def _parse_tree(self, root_item: Item) -> nodes.Node:
+        """Recursively iterate over an Item object to generate Node objects.
 
         Args:
-            root_item: The RootItem object to convert to a tree of docutils
+            root_item: The Item object to convert to a tree of docutils
                 Node objects.
 
         Returns:
             The root Node object of the tree.
         """
         root_node = nodes.definition_list()
-        if type(root_item) is not RootItem and root_item.content is not None:
+        if type(root_item) is not Item and root_item.content is not None:
             root_node += self._parse_item(root_item)
 
         # This keeps track of the current indentation level by maintaining a
@@ -365,7 +365,7 @@ class LinotypeDirective(Directive):
         return root_node
 
     def run(self) -> List[nodes.Node]:
-        """Convert a RootItem object to a docutils Node tree.
+        """Convert an Item object to a docutils Node tree.
 
         Returns:
             A list of Node objects.
