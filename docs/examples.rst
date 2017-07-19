@@ -4,14 +4,13 @@ Create two-column options lists
 -------------------------------
 Many programs display command-line options in a two-column list with the
 options and arguments on the left and descriptions on the right. Definition
-items with the styles 'inline_aligned' and 'heading_aligned' can be used for
-this purpose. The latter style is intended for options that are too long to
-otherwise fit.
+items with the styles ALIGNED and OVERFLOW can be used for this purpose. The
+latter style is intended for options that are too long to otherwise fit.
 
 .. code-block:: python
     :linenos:
 
-    from linotype import Formatter, RootItem
+    from linotype import DefStyle, Formatter, RootItem
 
     def help_message():
         formatter = Formatter()
@@ -20,19 +19,19 @@ otherwise fit.
         root_item.add_definition(
             "-q, --quiet", "",
             "Suppress non-error messages.",
-            style="inline_aligned")
+            style=DefStyle.ALIGNED)
         root_item.add_definition(
             "-v, --verbose", "",
             "Increase verbosity.",
-            style="inline_aligned")
+            style=DefStyle.ALIGNED)
         root_item.add_definition(
             "    --info", "FLAGS",
             "Fine-grained informational verbosity.",
-            style="inline_aligned")
+            style=DefStyle.ALIGNED)
         root_item.add_definition(
             "    --only-write-batch", "FILE",
             "Like --write-batch but without updating dest.",
-            style="heading_aligned")
+            style=DefStyle.OVERFLOW)
 
         return root_item
 

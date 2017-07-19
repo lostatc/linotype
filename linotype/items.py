@@ -18,6 +18,7 @@ You should have received a copy of the GNU General Public License
 along with linotype.  If not, see <http://www.gnu.org/licenses/>.
 """
 import re
+import enum
 import textwrap
 import functools
 import contextlib
@@ -42,14 +43,38 @@ MarkupPositions = NamedTuple(
     [("strong", List[Tuple[str, int]]), ("em", List[Tuple[str, int]])])
 
 
+class DefStyle(enum.Enum):
+    """Styles for definition items.
+
+    Attributes:
+        BLOCK, B: Display the message on a separate line from the term and
+            argument string.
+        OVERFLOW, O: Display the message on a separate line from the term and
+            argument string and align the message with those of all other
+            definitions that belong to the same parent item and have a style of
+            ALIGNED. Use a hanging indent if the message is too long.
+        INLINE, I: Display the message on the same line as the term and
+            argument string. Use a hanging indent if the message is too long.
+        ALIGNED, A: Display the message on the same line as the term and
+            argument string and align the message with those of all other
+            definitions that belong to the same parent item and have the style
+            ALIGNED. Use a hanging indent if the message is too long.
+    """
+    BLOCK = B = 1
+    OVERFLOW = O = 2
+    INLINE = I = 3
+    ALIGNED = A = 4
+
+
 class Formatter:
     """Control how the text output is formatted.
 
     Attributes:
         indent_increment: The number of spaces to increase/decrease the indent
             level by for each level.
-        inline_space: The number of spaces to leave between the argument string
-            and message of each definition when they are on the same line.
+        definition_buffer: The minimum number of spaces to leave between the
+            argument string and message of each definition when they are on the
+            same line.
         width: The number of columns at which to wrap text in the text output.
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
@@ -65,11 +90,11 @@ class Formatter:
             values as strong.
     """
     def __init__(
-            self, indent_increment=4, inline_space=2, width=79,
+            self, indent_increment=4, definition_buffer=2, width=79,
             auto_markup=True, manual_markup=True, visible=True,
             strong=(None, None, "bold"), em=(None, None, "underline")) -> None:
         self.indent_increment = indent_increment
-        self.inline_space = inline_space
+        self.definition_buffer = definition_buffer
         self.width = width
         self.auto_markup = auto_markup
         self.manual_markup = manual_markup
@@ -145,7 +170,7 @@ class RootItem:
         return self._add_item(TextItem, text, item_id, formatter)
 
     def add_definition(
-            self, term: str, args: str, msg: str, style="heading",
+            self, term: str, args: str, msg: str, style=DefStyle.BLOCK,
             formatter=None, item_id=None) -> "RootItem":
         """Add a definition to be printed.
 
@@ -162,35 +187,14 @@ class RootItem:
             msg: A description of the thing being defined, with arguments
                 that appear in the argument string emphasized if auto markup
                 is enabled.
-            style: The style of definition to use. Each style has a long name
-                and a short name, either of which can be used.
-
-                "heading", "he": Display the message on a separate line from
-                the term and argument string.
-
-                "heading_aligned", "ha": Display the message on a separate
-                line from the term and argument string and align the message
-                with those of all other definitions that belong to the same
-                parent item and have a style of "inline_aligned". Use a
-                hanging indent if the message is too long.
-
-                "inline", "in": Display the message on the same line as the
-                term and argument string. Use a hanging indent if the
-                message is too long.
-
-                "inline_aligned", "ia": Display the message on the same line
-                as the term and argument string and align the message with
-                those of all other definitions that belong to the same
-                parent item and have the style 'inline_aligned'. Use a
-                hanging indent if the message is too long.
-            formatter: A HelpFormatter object for defining the formatting of
+            style: A DefStyle instance defining the style of definition to use.
+                This affects the way the definition is formatted in the text
+                output.
+            formatter: A HelpFormatter instance for defining the formatting of
                 the new item. If 'None,' it uses the help formatter of its
                 parent item.
             item_id: A unique ID for the item that can be referenced in the
                 Sphinx documentation.
-
-        Raises:
-            ValueError: The given style was not recognized.
 
         Returns:
             The new RootItem object.
@@ -604,19 +608,20 @@ class TextItem(RootItem):
 class DefinitionItem(RootItem):
     def __init__(
             self, content: Any, item_id: Optional[str], parent: RootItem,
-            starting_indent: int, formatter: Formatter, style: str) -> None:
-        if style in ["heading", "he"]:
+            starting_indent: int, formatter: Formatter, style: DefStyle
+            ) -> None:
+        if style is DefStyle.BLOCK:
             format_func = functools.partial(
-                self._format_heading, aligned=False)
-        elif style in ["heading_aligned", "ha"]:
+                self._format_newline, aligned=False)
+        elif style is DefStyle.OVERFLOW:
             format_func = functools.partial(
-                self._format_heading, aligned=True)
-        elif style in ["inline", "in"]:
+                self._format_newline, aligned=True)
+        elif style is DefStyle.INLINE:
             format_func = functools.partial(
-                self._format_inline, aligned=False)
-        elif style in ["inline_aligned", "ia"]:
+                self._format_sameline, aligned=False)
+        elif style is DefStyle.ALIGNED:
             format_func = functools.partial(
-                self._format_inline, aligned=True)
+                self._format_sameline, aligned=True)
         else:
             raise ValueError(
                 "unrecognized definition style '{}'".format(style))
@@ -687,26 +692,26 @@ class DefinitionItem(RootItem):
         """Get the length of the buffer to leave before aligned messages.
 
         This value is the length of the longest signature (term + args) of
-        any sibling items that are definitions with the 'inline_aligned'
-        style plus the inline buffer space. If there are none, it is the
-        indentation increment.
+        any sibling items that are definitions with the ALIGNED style plus
+        the definition buffer space. If there are none, it is the indentation
+        increment.
 
         Returns:
             The number of spaces to buffer.
         """
-        inline_content = (
+        aligned_content = (
             item.content for item in self._parent._children
             if isinstance(item, type(self))
-               and item._format_func.func is self._format_inline
+               and item._format_func.func is self._format_sameline
                and item._format_func.keywords["aligned"] is True)
         try:
             longest = max(
                 len(" ".join([string for string in (term, args) if string]))
-                for term, args, msg in inline_content)
-            longest += self._formatter.inline_space
+                for term, args, msg in aligned_content)
+            longest += self._formatter.definition_buffer
         except ValueError:
-            # There are no siblings that are definitions with the
-            # 'inline_aligned' style.
+            # There are no siblings that are definitions with the ALIGNED
+            # style.
             longest = self._formatter.indent_increment
 
         return longest
@@ -764,14 +769,16 @@ class DefinitionItem(RootItem):
         return output_sig
 
     @staticmethod
-    def _format_inline(
+    def _format_sameline(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
-        """Format an 'inline' definition for the text output.
+        """Format an INLINE or ALIGNED definition for the text output.
 
         Args:
             self: The instance of the calling item.
             content: A tuple containing the term, args and message for the
                 definition.
+            aligned: Align the definition with all others belonging to the same
+                parent item and with a style of ALIGNED.
 
         Returns:
             The formatted definition as a string.
@@ -787,9 +794,9 @@ class DefinitionItem(RootItem):
         if aligned:
             sig_buffer = self._get_aligned_buffer()
         else:
-            sig_buffer = (len(
-                " ".join([string for string in (term, args) if string]))
-                          + self._formatter.inline_space)
+            sig_buffer = (
+                len(" ".join([string for string in (term, args) if string]))
+                + self._formatter.definition_buffer)
 
         output_sig = self._create_sig(
             term, args, term_positions, args_positions, sig_buffer)
@@ -809,14 +816,16 @@ class DefinitionItem(RootItem):
         return output_sig + output_msg[sig_buffer:]
 
     @staticmethod
-    def _format_heading(
+    def _format_newline(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
-        """Format a 'heading' definition for the text output.
+        """Format a BLOCK or OVERFLOW definition for the text output.
 
         Args:
             self: The instance of the calling item.
             content: A tuple containing the term, args and message for the
                 definition.
+            aligned: Align the definition with all others belonging to the same
+                parent item and with a style of ALIGNED.
 
         Returns:
             The formatted definition as a string.

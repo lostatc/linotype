@@ -1,5 +1,8 @@
 API
 ===
+.. autoclass:: linotype.DefStyle
+    :members:
+
 .. autoclass:: linotype.Formatter
     :members:
 
