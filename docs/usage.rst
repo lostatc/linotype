@@ -1,16 +1,17 @@
 Usage
 =====
-Messages in **linotype** consist of a tree of 'items' of which there are
+Documentation in **linotype** consist of a tree of 'items' of which there are
 currently two types, *text* and *definitions*. Every item can contain zero or
 more other items, and every level of nested items increases the indentation
-level. The **tItem** class is used to create a root-level item, and every
+level. The **Item** class is used to create a root-level item, and every
 **Item** object has public methods for creating new sub-items which in turn
 return a new **Item** object.
 
 Every **Item** object accepts a **Formatter** instance which is used to define
-how items are formatted in the text output. Items can be assigned IDs that can
-be referenced in the **Sphinx** documentation. Here is an example that prints a
-simple help message:
+how items are formatted in the text output. Every item can optionally be
+assigned an ID that can be referenced in the **Sphinx** documentation or when
+formatting the text output. Here is an example that prints a simple help
+message:
 
 .. code-block:: python
     :linenos:
@@ -22,14 +23,15 @@ simple help message:
         root_item = Item(formatter)
         usage = root_item.add_text("Usage:")
         usage.add_definition(
-            "zielen", "[global_options] command [command_options] [command_args]",
+            "codot", "[global_options] command [command_options] [command_args]",
             "")
         return root_item
 
     print(help_message().format())
 
 Line wrapping, indentation, alignment and markup are all applied automatically
-according to attributes set in the **Formatter** object. Additionally, inline
+according to attributes set in the **Formatter** object, so all text is passed
+into **linotype** as unformatted, single-line strings. Additionally, inline
 'strong' and 'emphasized' markup can be applied manually using the
 reStructuredText syntax::
 

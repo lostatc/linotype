@@ -1,9 +1,27 @@
 Examples
 ========
+Add blank lines
+---------------
+A blank line can be added to your text output using a *text* item containing a
+newline.
+
+.. code-block:: python
+    :linenos:
+
+    from linotype import Formatter, Item
+
+    def help_message():
+        formatter = Formatter()
+        root_item = Item(formatter)
+
+        root_item.add_text("This line comes before the break.")
+        root_item.add_text("\n")
+        root_item.add_text("This line comes after the break.")
+
 Create two-column options lists
 -------------------------------
 Many programs display command-line options in a two-column list with the
-options and arguments on the left and descriptions on the right. Definition
+options and arguments on the left and descriptions on the right. *Definition*
 items with the styles ALIGNED and OVERFLOW can be used for this purpose. The
 latter style is intended for options that are too long to otherwise fit.
 
