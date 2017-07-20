@@ -500,11 +500,12 @@ class Item:
                 combined_positions += getattr(auto_positions, markup_type)
 
             for substring, instance in combined_positions:
-                # Match any number of whitespace and newline characters between
-                # each consecutive sequence of word characters in the
-                # substring. It is necessary to strip out spaces because
-                # sometimes spaces are replaced with newlines in the formatted
-                # text.
+                # Match any number of whitespace and newline characters
+                # between each word in the substring since line breaks can
+                # only happen between words. It is necessary to strip out
+                # spaces because sometimes spaces are replaced with newlines
+                # in the formatted text, which is a problem when the text
+                # isn't indented.
                 words = re.split(r"(\w+)", substring)
                 substring_regex = re.compile("[\n\\s]*".join(
                     re.escape(word) for word in words if word.strip()))

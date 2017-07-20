@@ -165,6 +165,20 @@ def test_definition_manual_markup(formatter):
     assert root_item.format() == expected_output
 
 
+def test_definition_nested_markup(formatter):
+    """Auto markup nested in manual markup is applied properly."""
+    formatter.auto_markup = True
+    formatter.manual_markup = True
+    root_item = Item(formatter)
+    root_item.add_definition(
+        "--file", "FILE", "Obtain patterns from **FILE, one per** line.")
+    expected_output = textwrap.dedent("""\
+        \x1b[1m--file\x1b[0m \x1b[4mFILE\x1b[0m
+            Obtain patterns from \x1b[1m\x1b[4mFILE\x1b[0m\x1b[1m, one per\x1b[0m line.""")
+
+    assert root_item.format() == expected_output
+
+
 def test_nested_items_indent(formatter):
     """Nested items increase the indentation level."""
     root_item = Item(formatter)
