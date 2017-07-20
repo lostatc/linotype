@@ -63,6 +63,19 @@ def test_text_manual_markup(formatter):
     assert root_item.format() == expected_output
 
 
+def test_text_manual_markup_across_line_breaks(formatter):
+    """Manual markup that spans line breaks in the output is applied."""
+    formatter.manual_markup = True
+    root_item = Item(formatter)
+    root_item.add_text(
+        "This text string is so long that it can span multiple lines, which "
+        "*may interrupt* the parsing of manual markup.")
+    expected_output = textwrap.dedent("""\
+        This text string is so long that it can span multiple lines, which \x1b[4mmay
+        interrupt\x1b[0m the parsing of manual markup.""")
+    assert root_item.format() == expected_output
+
+
 def test_definition_block_formatting(formatter):
     """The BLOCK style of definition items format properly."""
     root_item = Item(formatter)

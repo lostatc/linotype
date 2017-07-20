@@ -104,7 +104,7 @@ class Formatter:
 
 
 class Item:
-    """Format an item in a text output.
+    """Format an item in the text output.
 
     This class allows for formatting text output consisting of a tree of
     "items". There are multiple types of items to choose from, and every
@@ -500,12 +500,15 @@ class Item:
                 combined_positions += getattr(auto_positions, markup_type)
 
             for substring, instance in combined_positions:
-                try:
-                    match = list(re.finditer(re.escape(substring), text))[instance]
-                except IndexError:
-                    # This can occur when manual markup conflicts with
-                    # automatic markup.
-                    continue
+                # Match any number of whitespace and newline characters between
+                # each consecutive sequence of word characters in the
+                # substring. It is necessary to strip out spaces because
+                # sometimes spaces are replaced with newlines in the formatted
+                # text.
+                words = re.split(r"(\w+)", substring)
+                substring_regex = re.compile("[\n\\s]*".join(
+                    re.escape(word) for word in words if word.strip()))
+                match = list(substring_regex.finditer(text))[instance]
                 markup_spans.append((match.span(), markup_type))
 
         markup_spans.sort(key=lambda x: x[0][1], reverse=True)

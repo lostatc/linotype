@@ -195,12 +195,7 @@ class LinotypeDirective(Directive):
 
             # Get the positions of each substring in the string.
             for substring, instance in combined_positions:
-                try:
-                    match = list(re.finditer(re.escape(substring), text))[instance]
-                except IndexError:
-                    # This can occur when manual markup conflicts with
-                    # automatic markup.
-                    continue
+                match = list(re.finditer(re.escape(substring), text))[instance]
                 markup_spans.append((match.span(), markup_type))
 
         # Order the spans by their start position.
@@ -245,7 +240,8 @@ class LinotypeDirective(Directive):
                         nested_spans.append(
                             ((nested_start, nested_end), nested_type))
 
-                top_level_nodes[i] += parse_top_level(nested_spans, (start, end))
+                top_level_nodes[i] += parse_top_level(
+                    nested_spans, (start, end))
 
             return top_level_nodes
 
