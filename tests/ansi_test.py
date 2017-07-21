@@ -17,6 +17,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with linotype.  If not, see <http://www.gnu.org/licenses/>.
 """
+import pytest
+
 from linotype.ansi import ansi_format
 
 
@@ -35,15 +37,17 @@ def test_style():
     assert ansi_format(None, None, "bold") == ("\x1b[1m", "\x1b[0m")
 
 
-def test_256_color():
-    """Setting a 256-bit color value results in correct output."""
-    assert ansi_format(128, None, None) == ("\x1b[38;5;128m", "\x1b[0m")
+@pytest.mark.parametrize("color_spec", [128, "128"])
+def test_256_color(color_spec):
+    """Setting an numerical color value results in correct output."""
+    assert ansi_format(color_spec, None, None) == ("\x1b[38;5;128m", "\x1b[0m")
 
 
-def test_hex_color():
+@pytest.mark.parametrize("color_spec", ["#ade0e0", "ADE0E0"])
+def test_hex_color(color_spec):
     """Setting a hex color value results in correct output."""
     assert ansi_format(
-        "#ade0e0", None, None) == ('\x1b[38;2;173;224;224m', '\x1b[0m')
+        color_spec, None, None) == ('\x1b[38;2;173;224;224m', '\x1b[0m')
 
 
 def test_multiple_styles():

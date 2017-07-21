@@ -45,21 +45,19 @@ def _get_color_code(spec: Union[str, int], base: int):
     Returns:
         The ANSI color code.
     """
-    if isinstance(spec, int) and 0 <= spec <= 255:
+    spec = str(spec).strip().lower()
+    hex_match = re.search(r"^#?([0-9a-f]{6})$", spec)
+    if spec in ANSI_COLORS:
+        return _ansi_join(base + ANSI_COLORS[spec])
+    elif hex_match:
+        hex_code = hex_match.group(1)
+        rgb = tuple(
+            int(hex_code[digit:digit + 2], 16) for digit in range(0, 6, 2))
+        return _ansi_join(base + 8, 2, _ansi_join(*rgb))
+    elif 0 <= int(spec) <= 255:
         return _ansi_join(base + 8, 5, spec)
-    elif isinstance(spec, str):
-        spec = spec.strip().lower()
-        hex_match = re.search(r"^#?([0-9a-f]{6})$", spec)
-
-        if spec in ANSI_COLORS:
-            return _ansi_join(base + ANSI_COLORS[spec])
-        elif hex_match:
-            hex_code = hex_match.group(1)
-            rgb = tuple(
-                int(hex_code[digit:digit + 2], 16) for digit in range(0, 6, 2))
-            return _ansi_join(base + 8, 2, _ansi_join(*rgb))
-
-    raise ValueError("unrecognized color spec '{0}'".format(str(spec)))
+    else:
+        raise ValueError("unrecognized color spec '{0}'".format(str(spec)))
 
 
 def ansi_format(
