@@ -427,9 +427,13 @@ class Item:
             else:
                 continue
 
-            end_match = end_pattern.search(initial_match.string[start_match_end:])
+            end_match = end_pattern.search(
+                initial_match.string[start_match_end:])
             if not end_match:
-                remaining = remaining[start_match_end:]
+                # Opening markup without closing markup is left alone. This
+                # prevents that opening markup from creating an infinite loop
+                # where it is matched over and over again.
+                remaining = text[start_match_end:]
                 continue
             end_match_start = end_match.start(1) + start_match_end
             end_match_end = end_match.end(1) + start_match_end
@@ -445,7 +449,7 @@ class Item:
                 em_spans.append((substring, position))
 
             text = text[:start_match_start] + substring + text[end_match_end:]
-            remaining = remaining[end_match_end:]
+            remaining = text[end_match_end:]
 
         markup_positions = MarkupPositions([], [])
 
