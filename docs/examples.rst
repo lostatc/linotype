@@ -3,7 +3,7 @@ Examples
 Add blank lines
 ---------------
 A blank line can be added to your text output using a *text* item containing a
-newline.
+newline character.
 
 .. code-block:: python
     :linenos:
@@ -17,6 +17,28 @@ newline.
         root_item.add_text("This line comes before the break.")
         root_item.add_text("\n")
         root_item.add_text("This line comes after the break.")
+
+Configure markup in text output
+-------------------------------
+The helper function **ansi_format** can be used to generate ANSI escape
+sequences to configure the style of markup in the text output.
+
+.. code-block:: python
+    :linenos:
+
+    from linotype import ansi_format, Formatter, Item
+
+    def help_message():
+        formatter = Formatter(
+            strong=ansi_format(fg="red", style="bold"),
+            em=ansi_format(fg="green", style="bold"))
+        root_item = Item(formatter)
+
+        root_item.add_text("This text has **strong** and *emphasized* markup.")
+
+        return root_item
+
+    print(help_message().format())
 
 Create two-column options lists
 -------------------------------

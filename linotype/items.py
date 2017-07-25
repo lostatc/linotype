@@ -81,9 +81,9 @@ class Formatter:
         manual_markup: Parse reST 'strong' and 'emphasized' inline markup.
         visible: Make the text visible in the output.
         strong: A 2-tuple containing the strings to print before and after
-            strings marked up as 'strong'.
+            strings marked up as 'strong'. The default is ANSI bold.
         em: A 2-tuple containing the strings to print before and after strings
-            marked up as 'emphasized'.
+            marked up as 'emphasized'. The default is ANSI underlined.
     """
     def __init__(
             self, indent_increment=4, definition_buffer=2, width=79,
