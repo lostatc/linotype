@@ -80,19 +80,16 @@ class Formatter:
             to certain text in the output.
         manual_markup: Parse reST 'strong' and 'emphasized' inline markup.
         visible: Make the text visible in the output.
-        strong: The markup to apply to 'strong' text. This accepts a 3-tuple
-            containing the foreground color, the background color and the
-            style. The foreground and background colors can be the name of an
-            ANSI color, an integer in the range 0-255 or a CSS-style hex value.
-            The style can be "bold", "underline" or a list containing both. Any
-            of these values can be None, which means no formatting.
-        em: The markup to apply to 'emphasized' text. This accepts the same
-            values as strong.
+        strong: A 2-tuple containing the strings to print before and after
+            strings marked up as 'strong'.
+        em: A 2-tuple containing the strings to print before and after strings
+            marked up as 'emphasized'.
     """
     def __init__(
             self, indent_increment=4, definition_buffer=2, width=79,
             auto_markup=True, manual_markup=True, visible=True,
-            strong=(None, None, "bold"), em=(None, None, "underline")) -> None:
+            strong=ansi_format(style="bold"), em=ansi_format(style="underline")
+            )-> None:
         self.indent_increment = indent_increment
         self.definition_buffer = definition_buffer
         self.width = width
@@ -525,8 +522,8 @@ class Item:
         markup_sequences = []
         open_sequences = []
         for (start, end), markup_type in markup_spans:
-            start_sequence, end_sequence = ansi_format(
-                *getattr(self._formatter, markup_type))
+            start_sequence, end_sequence = getattr(
+                self._formatter, markup_type)
 
             open_sequences = [
                 (position, sequence) for position, sequence in open_sequences

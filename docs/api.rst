@@ -1,5 +1,7 @@
 API
 ===
+.. autofunction:: linotype.ansi_format
+
 .. autoclass:: linotype.DefStyle
     :members:
 

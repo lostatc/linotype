@@ -21,7 +21,7 @@ import textwrap
 
 import pytest
 
-from linotype import DefStyle, Formatter, Item
+from linotype import DefStyle, Formatter, Item, ansi_format
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def formatter():
     formatter = Formatter(
         indent_increment=4, definition_buffer=2, width=79,
         auto_markup=False, manual_markup=False, visible=True,
-        strong=(None, None, "bold"), em=(None, None, "underline"))
+        strong=ansi_format(style="bold"), em=ansi_format(style="underline"))
     return formatter
 
 

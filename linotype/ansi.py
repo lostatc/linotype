@@ -60,21 +60,21 @@ def _get_color_code(spec: Union[str, int], base: int):
         raise ValueError("unrecognized color spec '{0}'".format(str(spec)))
 
 
-def ansi_format(
-        fg: Union[str, int, None], bg: Union[str, int, None],
-        style: Union[str, Iterable[str], None]) -> Tuple[str, str]:
+def ansi_format(fg=None, bg=None, style=None) -> Tuple[str, str]:
     """Get the appropriate ANSI escape sequences based on input.
 
     Args:
         fg: The foreground color specification. This can be the name of an ANSI
             color, an integer in the range 0-255 or a CSS-style hex value.
+            'None' means no formatting.
         bg: The background color specification. This can be the name of an ANSI
             color, an integer in the range 0-255 or a CSS-style hex value.
+            'None' means no formatting.
         style: The text style. This can be one of "bold", "underline" or a list
-            containing both.
+            containing both. 'None' means no formatting.
 
     Raises:
-        ValueError: The given style was unrecognized.
+        ValueError: The given style or color spec was unrecognized.
 
     Returns:
         A tuple containing the starting and ending ANSI escape sequences.
