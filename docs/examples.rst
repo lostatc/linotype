@@ -50,28 +50,25 @@ latter style is intended for options that are too long to otherwise fit.
 .. code-block:: python
     :linenos:
 
-    from linotype import DefStyle, Formatter, Item
+    from linotype import DefinitionStyle, Formatter, Item
 
     def help_message():
-        formatter = Formatter()
+        formatter = Formatter(definition_style=DefinitionStyle.ALIGNED)
         root_item = Item(formatter)
 
         root_item.add_definition(
             "-q, --quiet", "",
-            "Suppress non-error messages.",
-            style=DefStyle.ALIGNED)
+            "Suppress non-error messages.")
         root_item.add_definition(
             "-v, --verbose", "",
-            "Increase verbosity.",
-            style=DefStyle.ALIGNED)
+            "Increase verbosity.")
         root_item.add_definition(
             "    --info", "FLAGS",
-            "Fine-grained informational verbosity.",
-            style=DefStyle.ALIGNED)
+            "Fine-grained informational verbosity.")
+        root_item.formatter.definition_style = DefinitionStyle.OVERFLOW
         root_item.add_definition(
             "    --only-write-batch", "FILE",
-            "Like --write-batch but without updating dest.",
-            style=DefStyle.OVERFLOW)
+            "Like --write-batch but without updating dest.")
 
         return root_item
 

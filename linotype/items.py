@@ -19,6 +19,7 @@ along with linotype.  If not, see <http://www.gnu.org/licenses/>.
 """
 import re
 import enum
+import copy
 import textwrap
 import functools
 import contextlib
@@ -43,7 +44,7 @@ MarkupPositions = NamedTuple(
     [("strong", List[Tuple[str, int]]), ("em", List[Tuple[str, int]])])
 
 
-class DefStyle(enum.Enum):
+class DefinitionStyle(enum.Enum):
     """Styles for definition items.
 
     Attributes:
@@ -70,12 +71,14 @@ class Formatter:
     """Control how the text output is formatted.
 
     Attributes:
+        width: The number of columns at which to wrap text in the text output.
         indent_increment: The number of spaces to increase/decrease the indent
             level by for each level.
         definition_buffer: The minimum number of spaces to leave between the
             argument string and message of each definition when they are on the
             same line.
-        width: The number of columns at which to wrap text in the text output.
+        definition_style: A DefStyle instance representing the style of
+            definition to use.
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
         manual_markup: Parse reST 'strong' and 'emphasized' inline markup.
@@ -86,13 +89,14 @@ class Formatter:
             marked up as 'emphasized'. The default is ANSI underlined.
     """
     def __init__(
-            self, indent_increment=4, definition_buffer=2, width=79,
-            auto_markup=True, manual_markup=True, visible=True,
-            strong=ansi_format(style="bold"), em=ansi_format(style="underline")
-            )-> None:
+            self, width=79, indent_increment=4, definition_buffer=2,
+            definition_style=DefinitionStyle.BLOCK, auto_markup=True,
+            manual_markup=True, visible=True, strong=ansi_format(style="bold"),
+            em=ansi_format(style="underline"))-> None:
+        self.width = width
         self.indent_increment = indent_increment
         self.definition_buffer = definition_buffer
-        self.width = width
+        self.definition_style = definition_style
         self.auto_markup = auto_markup
         self.manual_markup = manual_markup
         self.visible = visible
@@ -123,27 +127,27 @@ class Item:
     Attributes:
         content: The content to display in the text output.
         id: The item ID.
+        formatter: The formatter object for the item tree.
         current_level: The current indentation level.
         _format_func: The function used to format the current content.
         _parent: The parent item object.
         _current_indent: The number of spaces that the item is currently
             indented.
-        _formatter: The formatter object for the item tree.
         _children: A list of Item objects in the text output.
     """
     def __init__(self, formatter: Formatter) -> None:
         self.content = None
         self.id = None
+        self.formatter = formatter
         self._format_func = None
         self._parent = None
         self._current_indent = 0
-        self._formatter = formatter
         self._children = []
 
     @property
     def current_level(self) -> int:
         """The current indentation level."""
-        return int(self._current_indent / self._formatter.indent_increment)
+        return int(self._current_indent / self.formatter.indent_increment)
 
     # Message building methods
     # ========================
@@ -155,20 +159,19 @@ class Item:
 
         Args:
             text: The text to be printed.
-            formatter: A HelpFormatter object for defining the formatting of
-                the new item. If 'None,' it uses the help formatter of its
-                parent item.
+            formatter: A Formatter object for defining the formatting of the
+                new item. If 'None,' it uses the formatter of its parent item.
             item_id: A unique ID for the item that can be referenced in the
                 Sphinx documentation.
 
         Returns:
             The new Item object.
         """
-        return self._add_item(TextItem, text, item_id, formatter)
+        return self._add_item(TextItem, text, formatter, item_id)
 
     def add_definition(
-            self, term: str, args: str, msg: str, style=DefStyle.BLOCK,
-            formatter=None, item_id=None) -> "Item":
+            self, term: str, args: str, msg: str, formatter=None, item_id=None
+            ) -> "Item":
         """Add a definition to be printed.
 
         This item displays a formatted definition in one of multiple styles.
@@ -180,16 +183,13 @@ class Item:
                 enabled, this is strong in the text output.
             args: The list of arguments for the thing being defined as a
                 single string. If auto markup is enabled, consecutive strings
-                of unicode word characters are emphasized in the text output.
+                of unicode word characters (arguments) are emphasized in the
+                text output.
             msg: A description of the thing being defined, with arguments
                 that appear in the argument string emphasized if auto markup
                 is enabled.
-            style: A DefStyle instance defining the style of definition to use.
-                This affects the way the definition is formatted in the text
-                output.
-            formatter: A HelpFormatter instance for defining the formatting of
-                the new item. If 'None,' it uses the help formatter of its
-                parent item.
+            formatter: A Formatter instance for defining the formatting of the
+                new item. If 'None,' it uses the formatter of its parent item.
             item_id: A unique ID for the item that can be referenced in the
                 Sphinx documentation.
 
@@ -197,22 +197,21 @@ class Item:
             The new Item object.
         """
         return self._add_item(
-            DefinitionItem, [term, args, msg], item_id, formatter, style)
+            DefinitionItem, [term, args, msg], formatter, item_id)
 
     def _add_item(
             self, item_type: Type["Item"], content: Any,
-            item_id: Optional[str], formatter: Optional[Formatter], *args
+            formatter: Optional[Formatter], item_id: Optional[str]
             ) -> "Item":
         """Add a new item under the current item.
 
         Args:
             item_type: The type of item that the current item is.
             content: The content to print.
+            formatter: A Formatter object for defining the formatting of the
+                new item. If 'None,' it uses the formatter of its parent item.
             item_id: A unique ID for the item that can be referenced in the
                 Sphinx documentation.
-            formatter: A HelpFormatter object for defining the formatting of
-                the new item. If 'None,' it uses the help formatter of its
-                parent item.
 
         Raises:
             ValueError: The given item ID is already in use.
@@ -223,17 +222,19 @@ class Item:
         if item_id is not None and self.get_item_by_id(
                 item_id, start_at_root=True):
             raise ValueError(
-                "The item ID '{0}' is already in use".format(item_id))
+                "the item ID '{0}' is already in use".format(item_id))
 
         with contextlib.ExitStack() as stack:
             if self.content:
                 stack.enter_context(self._indent())
 
             if formatter is None:
-                formatter = self._formatter
+                # Making this a copy ensures that modifying the formatter of
+                # an item doesn't modify the formatter of its parent.
+                formatter = copy.copy(self.formatter)
 
             new_item = item_type(
-                content, item_id, self, self._current_indent, formatter, *args)
+                content, item_id, self, self._current_indent, formatter)
             self._children.append(new_item)
 
         return new_item
@@ -300,7 +301,7 @@ class Item:
         Returns:
             The formatted text output as a string.
         """
-        if self.content and self._formatter.visible:
+        if self.content and self.formatter.visible:
             # The formatting functions are static methods so that the
             # current item instance can be passed in instead of the parent
             # item instance.
@@ -380,9 +381,9 @@ class Item:
     @contextlib.contextmanager
     def _indent(self) -> None:
         """Temporarily increase the indentation level."""
-        self._current_indent += self._formatter.indent_increment
+        self._current_indent += self.formatter.indent_increment
         yield
-        self._current_indent -= self._formatter.indent_increment
+        self._current_indent -= self.formatter.indent_increment
 
 
     @staticmethod
@@ -495,9 +496,9 @@ class Item:
         for markup_type in ["strong", "em"]:
             combined_positions = []
 
-            if self._formatter.manual_markup:
+            if self.formatter.manual_markup:
                 combined_positions += getattr(manual_positions, markup_type)
-            if self._formatter.auto_markup:
+            if self.formatter.auto_markup:
                 combined_positions += getattr(auto_positions, markup_type)
 
             for substring, instance in combined_positions:
@@ -523,7 +524,7 @@ class Item:
         open_sequences = []
         for (start, end), markup_type in markup_spans:
             start_sequence, end_sequence = getattr(
-                self._formatter, markup_type)
+                self.formatter, markup_type)
 
             open_sequences = [
                 (position, sequence) for position, sequence in open_sequences
@@ -569,7 +570,7 @@ class Item:
         subsequent_indent = self._current_indent + add_subsequent
 
         wrapper = textwrap.TextWrapper(
-            width=self._formatter.width,
+            width=self.formatter.width,
             drop_whitespace=drop_whitespace,
             initial_indent=" "*initial_indent,
             subsequent_indent=" "*subsequent_indent)
@@ -599,7 +600,7 @@ class TextItem(Item):
         Returns:
             The formatted text as a string.
         """
-        if self._formatter.manual_markup:
+        if self.formatter.manual_markup:
             output_text, positions = self.parse_manual_markup(content)
         else:
             output_text, positions = content, None
@@ -613,18 +614,18 @@ class TextItem(Item):
 class DefinitionItem(Item):
     def __init__(
             self, content: Any, item_id: Optional[str], parent: Item,
-            starting_indent: int, formatter: Formatter, style: DefStyle
-            ) -> None:
-        if style is DefStyle.BLOCK:
+            starting_indent: int, formatter: Formatter) -> None:
+        style = formatter.definition_style
+        if style is DefinitionStyle.BLOCK:
             format_func = functools.partial(
                 self._format_newline, aligned=False)
-        elif style is DefStyle.OVERFLOW:
+        elif style is DefinitionStyle.OVERFLOW:
             format_func = functools.partial(
                 self._format_newline, aligned=True)
-        elif style is DefStyle.INLINE:
+        elif style is DefinitionStyle.INLINE:
             format_func = functools.partial(
                 self._format_sameline, aligned=False)
-        elif style is DefStyle.ALIGNED:
+        elif style is DefinitionStyle.ALIGNED:
             format_func = functools.partial(
                 self._format_sameline, aligned=True)
         else:
@@ -707,17 +708,17 @@ class DefinitionItem(Item):
         aligned_content = (
             item.content for item in self._parent._children
             if isinstance(item, type(self))
-               and item._format_func.func is self._format_sameline
-               and item._format_func.keywords["aligned"] is True)
+            and item._format_func.func is self._format_sameline
+            and item._format_func.keywords["aligned"] is True)
         try:
             longest = max(
                 len(" ".join([string for string in (term, args) if string]))
                 for term, args, msg in aligned_content)
-            longest += self._formatter.definition_buffer
+            longest += self.formatter.definition_buffer
         except ValueError:
             # There are no siblings that are definitions with the ALIGNED
             # style.
-            longest = self._formatter.indent_increment
+            longest = self.formatter.indent_increment
 
         return longest
 
@@ -754,7 +755,7 @@ class DefinitionItem(Item):
         auto_args_positions = self.parse_args_markup(args)
 
         wrapper = self._get_wrapper(
-            add_initial=-self._formatter.indent_increment,
+            add_initial=-self.formatter.indent_increment,
             drop_whitespace=False)
         output_args = "{0:<{1}}".format(
             " "*(term_buffer + 1) + args, sig_buffer)
@@ -789,7 +790,7 @@ class DefinitionItem(Item):
             The formatted definition as a string.
         """
         term, args, msg = content
-        if self._formatter.manual_markup:
+        if self.formatter.manual_markup:
             term, term_positions = self.parse_manual_markup(term)
             args, args_positions = self.parse_manual_markup(args)
             msg, msg_positions = self.parse_manual_markup(msg)
@@ -801,12 +802,12 @@ class DefinitionItem(Item):
         else:
             sig_buffer = (
                 len(" ".join([string for string in (term, args) if string]))
-                + self._formatter.definition_buffer)
+                + self.formatter.definition_buffer)
 
         output_sig = self._create_sig(
             term, args, term_positions, args_positions, sig_buffer)
 
-        subsequent_indent = self._formatter.indent_increment
+        subsequent_indent = self.formatter.indent_increment
         if aligned:
             subsequent_indent += sig_buffer
         wrapper = self._get_wrapper(
@@ -836,7 +837,7 @@ class DefinitionItem(Item):
             The formatted definition as a string.
         """
         term, args, msg = content
-        if self._formatter.manual_markup:
+        if self.formatter.manual_markup:
             term, term_positions = self.parse_manual_markup(term)
             args, args_positions = self.parse_manual_markup(args)
             msg, msg_positions = self.parse_manual_markup(msg)
@@ -855,7 +856,7 @@ class DefinitionItem(Item):
                 wrapper = self._get_wrapper(
                     add_initial=sig_buffer,
                     add_subsequent=(
-                        sig_buffer + self._formatter.indent_increment))
+                        sig_buffer + self.formatter.indent_increment))
             else:
                 stack.enter_context(self._indent())
                 wrapper = self._get_wrapper()

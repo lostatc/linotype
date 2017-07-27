@@ -2,7 +2,7 @@ API
 ===
 .. autofunction:: linotype.ansi_format
 
-.. autoclass:: linotype.DefStyle
+.. autoclass:: linotype.DefinitionStyle
     :members:
 
 .. autoclass:: linotype.Formatter
