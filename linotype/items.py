@@ -77,7 +77,7 @@ class Formatter:
         definition_buffer: The minimum number of spaces to leave between the
             argument string and message of each definition when they are on the
             same line.
-        definition_style: A DefStyle instance representing the style of
+        definition_style: A DefinitionStyle instance representing the style of
             definition to use.
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
