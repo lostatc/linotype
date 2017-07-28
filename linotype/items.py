@@ -300,10 +300,7 @@ class Item:
             The formatted text output as a string.
         """
         if self.content and self.formatter.visible:
-            # The formatting functions are static methods so that the
-            # current item instance can be passed in instead of the parent
-            # item instance.
-            help_msg = self._format_func(self, self.content)
+            help_msg = self._format_func(self.content)
         else:
             help_msg = None
 
@@ -602,12 +599,10 @@ class TextItem(Item):
         self._format_func = self._format
         self._current_indent = parent._current_indent
 
-    @staticmethod
     def _format(self, content: str) -> str:
         """Format plain text for the text output.
 
         Args:
-            self: The instance of the calling item.
             content: The text to be formatted.
 
         Returns:
@@ -737,8 +732,7 @@ class DefinitionItem(Item):
         aligned_content = (
             item.content for item in self._parent._children
             if isinstance(item, type(self))
-            and item._format_func.func is self._format_sameline
-            and item._format_func.keywords["aligned"] is True)
+            and item.formatter.definition_style is DefinitionStyle.ALIGNED)
         try:
             longest = max(
                 len(" ".join([string for string in (term, args) if string]))
@@ -803,13 +797,11 @@ class DefinitionItem(Item):
 
         return output_sig
 
-    @staticmethod
     def _format_sameline(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
         """Format an INLINE or ALIGNED definition for the text output.
 
         Args:
-            self: The instance of the calling item.
             content: A tuple containing the term, args and message for the
                 definition.
             aligned: Align the definition with all others belonging to the same
@@ -850,13 +842,11 @@ class DefinitionItem(Item):
 
         return output_sig + output_msg[sig_buffer:]
 
-    @staticmethod
     def _format_newline(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
         """Format a BLOCK or OVERFLOW definition for the text output.
 
         Args:
-            self: The instance of the calling item.
             content: A tuple containing the term, args and message for the
                 definition.
             aligned: Align the definition with all others belonging to the same
