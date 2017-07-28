@@ -131,6 +131,7 @@ class Item:
         id: The item ID.
         current_level: The current indentation level.
         _parent: The parent Item object.
+        _format_func: The function used for formatting the text output.
         _current_indent: The number of spaces that the item is currently
             indented.
         _children: A list of all Item objects belonging to this item.
@@ -142,6 +143,10 @@ class Item:
         self._parent = None
         self._current_indent = 0
         self._children = []
+
+    @property
+    def _format_func(self) -> Callable:
+        return lambda: None
 
     @property
     def current_level(self) -> int:
@@ -223,7 +228,7 @@ class Item:
                 "the item ID '{0}' is already in use".format(item_id))
 
         with contextlib.ExitStack() as stack:
-            if self.content:
+            if self.content is not None:
                 stack.enter_context(self._indent())
 
             if formatter is None:
@@ -298,7 +303,7 @@ class Item:
         Returns:
             The formatted text output as a string.
         """
-        if self.content and self.formatter.visible:
+        if self.content is not None and self.formatter.visible:
             help_msg = self._format_func(self.content)
         else:
             help_msg = None
@@ -584,7 +589,7 @@ class TextItem(Item):
         content: The content to display in the output.
         id: The item ID.
         _parent: The parent Item object.
-        _format_func: The function used to format the current content.
+        _format_func: The function used for formatting the text output.
         _current_indent: The number of spaces that the item is currently
             indented.
     """
@@ -595,8 +600,12 @@ class TextItem(Item):
         self.content = content
         self.id = item_id
         self._parent = parent
-        self._format_func = self._format
         self._current_indent = parent._current_indent
+
+    @property
+    def _format_func(self) -> Callable:
+        """Get the function for formatting the text output."""
+        return self._format
 
     def _format(self, content: str) -> str:
         """Format plain text for the text output.
@@ -631,7 +640,7 @@ class DefinitionItem(Item):
         content: The content to display in the output.
         id: The item ID.
         _parent: The parent Item object.
-        _format_func: The function used to format the current content.
+        _format_func: The function used for formatting the text output.
         _current_indent: The number of spaces that the item is currently
             indented.
     """
