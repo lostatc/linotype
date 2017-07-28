@@ -126,8 +126,8 @@ class Item:
 
     Attributes:
         content: The content to display in the output.
-        id: The item ID.
         formatter: The Formatter object for the item tree.
+        id: The item ID.
         current_level: The current indentation level.
         _format_func: The function used to format the current content.
         _parent: The parent Item object.
@@ -137,10 +137,10 @@ class Item:
     """
     def __init__(self, formatter: Formatter) -> None:
         self.content = None
-        self.id = None
         self.formatter = formatter
-        self._format_func = None
+        self.id = None
         self._parent = None
+        self._format_func = None
         self._current_indent = 0
         self._children = []
 
@@ -201,8 +201,7 @@ class Item:
 
     def _add_item(
             self, item_type: Type["Item"], content: Any,
-            formatter: Optional[Formatter], item_id: Optional[str]
-            ) -> "Item":
+            formatter: Optional[Formatter], item_id: Optional[str]) -> "Item":
         """Add a new item under the current item.
 
         Args:
@@ -233,8 +232,7 @@ class Item:
                 # an item doesn't modify the formatter of its parent.
                 formatter = copy.copy(self.formatter)
 
-            new_item = item_type(
-                content, item_id, self, self._current_indent, formatter)
+            new_item = item_type(content, self, formatter, item_id)
             self._children.append(new_item)
 
         return new_item
@@ -582,29 +580,27 @@ class TextItem(Item):
 
     Args:
         content: The content to display in the output.
-        item_id: The item ID.
         parent: The parent Item object.
-        starting_indent: The number of spaces that the item is currently
-            indented.
         formatter: The Formatter object for the item tree.
+        item_id: The item ID.
 
     Attributes:
         content: The content to display in the output.
         id: The item ID.
-        _format_func: The function used to format the current content.
         _parent: The parent Item object.
+        _format_func: The function used to format the current content.
         _current_indent: The number of spaces that the item is currently
             indented.
     """
     def __init__(
-            self, content: Any, item_id: Optional[str], parent: Item,
-            starting_indent: int, formatter: Formatter) -> None:
+            self, content: Any, parent: Item, formatter: Formatter,
+            item_id: Optional[str]) -> None:
         super().__init__(formatter)
         self.content = content
         self.id = item_id
-        self._format_func = self._format
         self._parent = parent
-        self._current_indent = starting_indent
+        self._format_func = self._format
+        self._current_indent = parent._current_indent
 
     @staticmethod
     def _format(self, content: str) -> str:
@@ -633,23 +629,21 @@ class DefinitionItem(Item):
 
     Args:
         content: The content to display in the output.
-        item_id: The item ID.
         parent: The parent Item object.
-        starting_indent: The number of spaces that the item is currently
-            indented.
         formatter: The Formatter object for the item tree.
+        item_id: The item ID.
 
     Attributes:
         content: The content to display in the output.
         id: The item ID.
-        _format_func: The function used to format the current content.
         _parent: The parent Item object.
+        _format_func: The function used to format the current content.
         _current_indent: The number of spaces that the item is currently
             indented.
     """
     def __init__(
-            self, content: Any, item_id: Optional[str], parent: Item,
-            starting_indent: int, formatter: Formatter) -> None:
+            self, content: Any, parent: Item, formatter: Formatter,
+            item_id: Optional[str]) -> None:
         style = formatter.definition_style
         if style is DefinitionStyle.BLOCK:
             format_func = functools.partial(
@@ -670,9 +664,9 @@ class DefinitionItem(Item):
         super().__init__(formatter)
         self.content = content
         self.id = item_id
-        self._format_func = format_func
         self._parent = parent
-        self._current_indent = starting_indent
+        self._format_func = format_func
+        self._current_indent = parent._current_indent
 
     @staticmethod
     def parse_term_markup(term_string: str) -> MarkupPositions:
