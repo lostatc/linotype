@@ -24,7 +24,8 @@ import textwrap
 import functools
 import contextlib
 import collections
-from typing import Any, Tuple, Generator, Optional, NamedTuple, List, Type
+from typing import (
+    Any, Tuple, Generator, Optional, NamedTuple, List, Type, Callable)
 
 from docutils.frontend import OptionParser
 from docutils.parsers.rst import Parser
@@ -129,7 +130,6 @@ class Item:
         formatter: The Formatter object for the item tree.
         id: The item ID.
         current_level: The current indentation level.
-        _format_func: The function used to format the current content.
         _parent: The parent Item object.
         _current_indent: The number of spaces that the item is currently
             indented.
@@ -140,7 +140,6 @@ class Item:
         self.formatter = formatter
         self.id = None
         self._parent = None
-        self._format_func = None
         self._current_indent = 0
         self._children = []
 
@@ -639,29 +638,31 @@ class DefinitionItem(Item):
     def __init__(
             self, content: Any, parent: Item, formatter: Formatter,
             item_id: Optional[str]) -> None:
-        style = formatter.definition_style
-        if style is DefinitionStyle.BLOCK:
-            format_func = functools.partial(
-                self._format_newline, aligned=False)
-        elif style is DefinitionStyle.OVERFLOW:
-            format_func = functools.partial(
-                self._format_newline, aligned=True)
-        elif style is DefinitionStyle.INLINE:
-            format_func = functools.partial(
-                self._format_sameline, aligned=False)
-        elif style is DefinitionStyle.ALIGNED:
-            format_func = functools.partial(
-                self._format_sameline, aligned=True)
-        else:
-            raise ValueError(
-                "unrecognized definition style '{}'".format(style))
-
         super().__init__(formatter)
         self.content = content
         self.id = item_id
         self._parent = parent
-        self._format_func = format_func
         self._current_indent = parent._current_indent
+
+    @property
+    def _format_func(self) -> Callable:
+        """Get the function for formatting the text output.
+
+        Raises:
+            ValueError: The definition style was unrecognized.
+
+        Returns:
+             The function for formatting the text output.
+        """
+        style = self.formatter.definition_style
+        if style is DefinitionStyle.BLOCK:
+            return functools.partial(self._format_newline, aligned=False)
+        elif style is DefinitionStyle.OVERFLOW:
+            return functools.partial(self._format_newline, aligned=True)
+        elif style is DefinitionStyle.INLINE:
+            return functools.partial(self._format_sameline, aligned=False)
+        elif style is DefinitionStyle.ALIGNED:
+            return functools.partial(self._format_sameline, aligned=True)
 
     @staticmethod
     def parse_term_markup(term_string: str) -> MarkupPositions:

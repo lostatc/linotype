@@ -183,6 +183,18 @@ def test_definition_nested_markup(formatter):
     assert root_item.format() == expected_output
 
 
+def test_definition_change_style_retroactively(formatter):
+    root_item = Item(formatter)
+    option = root_item.add_definition(
+        "diff", "[options] number1..number2 [files]",
+        "Compare the snapshots number1 and number2.")
+    option.formatter.definition_style = DefinitionStyle.INLINE
+    expected_output = textwrap.dedent("""\
+        diff [options] number1..number2 [files]  Compare the snapshots number1 and
+            number2.""")
+
+    assert root_item.format() == expected_output
+
 def test_nested_items_indent(formatter):
     """Nested items increase the indentation level."""
     root_item = Item(formatter)
