@@ -92,7 +92,7 @@ class Formatter:
             self, width=79, indent_increment=4, definition_buffer=2,
             definition_style=DefinitionStyle.BLOCK, auto_markup=True,
             manual_markup=True, visible=True, strong=ansi_format(style="bold"),
-            em=ansi_format(style="underline"))-> None:
+            em=ansi_format(style="underline")) -> None:
         self.width = width
         self.indent_increment = indent_increment
         self.definition_buffer = definition_buffer
@@ -105,7 +105,7 @@ class Formatter:
 
 
 class Item:
-    """Format an item in the text output.
+    """An item to be displayed in the output.
 
     This class allows for formatting text output consisting of a tree of
     "items". There are multiple types of items to choose from, and every
@@ -122,18 +122,18 @@ class Item:
     in the Sphinx documentation.
 
     Args:
-        formatter: The formatter object for the item tree.
+        formatter: The Formatter object for the item tree.
 
     Attributes:
-        content: The content to display in the text output.
+        content: The content to display in the output.
         id: The item ID.
-        formatter: The formatter object for the item tree.
+        formatter: The Formatter object for the item tree.
         current_level: The current indentation level.
         _format_func: The function used to format the current content.
-        _parent: The parent item object.
+        _parent: The parent Item object.
         _current_indent: The number of spaces that the item is currently
             indented.
-        _children: A list of Item objects in the text output.
+        _children: A list of all Item objects belonging to this item.
     """
     def __init__(self, formatter: Formatter) -> None:
         self.content = None
@@ -385,7 +385,6 @@ class Item:
         yield
         self._current_indent -= self.formatter.indent_increment
 
-
     @staticmethod
     def parse_manual_markup(text: str) -> Tuple[str, MarkupPositions]:
         """Remove reST markup characters from text and get their positions.
@@ -579,6 +578,24 @@ class Item:
 
 
 class TextItem(Item):
+    """A text item to be displayed in the output.
+
+    Args:
+        content: The content to display in the output.
+        item_id: The item ID.
+        parent: The parent Item object.
+        starting_indent: The number of spaces that the item is currently
+            indented.
+        formatter: The Formatter object for the item tree.
+
+    Attributes:
+        content: The content to display in the output.
+        id: The item ID.
+        _format_func: The function used to format the current content.
+        _parent: The parent Item object.
+        _current_indent: The number of spaces that the item is currently
+            indented.
+    """
     def __init__(
             self, content: Any, item_id: Optional[str], parent: Item,
             starting_indent: int, formatter: Formatter) -> None:
@@ -612,6 +629,24 @@ class TextItem(Item):
 
 
 class DefinitionItem(Item):
+    """A definition item to be displayed in the output.
+
+    Args:
+        content: The content to display in the output.
+        item_id: The item ID.
+        parent: The parent Item object.
+        starting_indent: The number of spaces that the item is currently
+            indented.
+        formatter: The Formatter object for the item tree.
+
+    Attributes:
+        content: The content to display in the output.
+        id: The item ID.
+        _format_func: The function used to format the current content.
+        _parent: The parent Item object.
+        _current_indent: The number of spaces that the item is currently
+            indented.
+    """
     def __init__(
             self, content: Any, item_id: Optional[str], parent: Item,
             starting_indent: int, formatter: Formatter) -> None:
@@ -746,10 +781,10 @@ class DefinitionItem(Item):
         term_buffer = len(term)
 
         # Markup must be added after all text formatting has occurred
-        # because the markup strings should be ignored when wrapping the
-        # text. To allow the formatting to be applied to each part of the
-        # definition separately, spaces are used as filler in certain places
-        # so that the text can be wrapped properly before the real text is
+        # because the markup strings shouldn't affect the text wrapping. To
+        # allow the formatting to be applied to each part of the definition
+        # separately, spaces are used as filler in certain places so that
+        # the text can be wrapped properly before the real text is
         # substituted.
         auto_term_positions = self.parse_term_markup(term)
         auto_args_positions = self.parse_args_markup(args)
