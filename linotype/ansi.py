@@ -69,7 +69,7 @@ def ansi_format(fg=None, bg=None, style=None) -> Tuple[str, str]:
         fg: The foreground color specification. This can be the name of one of
             the eight ANSI colors, an integer in the range 0-255 or a CSS-style
             hex value. 'None' means no formatting.
-        bg: The foreground color specification. This can be the name of one of
+        bg: The background color specification. This can be the name of one of
             the eight ANSI colors, an integer in the range 0-255 or a CSS-style
             hex value. 'None' means no formatting.
         style: The text style. This can be one of "bold", "underline" or a list

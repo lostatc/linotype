@@ -21,10 +21,12 @@ message:
     def help_message():
         formatter = Formatter()
         root_item = Item(formatter)
+
         usage = root_item.add_text("Usage:")
         usage.add_definition(
             "codot", "[global_options] command [command_options] [command_args]",
             "")
+
         return root_item
 
     print(help_message().format())
@@ -47,11 +49,11 @@ list of **Sphinx** extensions in the *conf.py* file for your project:
 
     extensions = ["linotype.ext"]
 
-The help message can be imported into your **Sphinx** documentation using the
+The documentation can be imported into your **Sphinx** documentation using the
 'linotype' directive. It accepts the following options:
 
 \:func\:
-    The name of the function which returns a **Item** object.
+    The name of the function which returns an **Item** object.
 
 \:module\:
     The name of the module containing the function.

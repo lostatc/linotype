@@ -120,7 +120,7 @@ class Item:
     is created to affect its formatting.
 
     Every item can optionally be assigned a unique ID that can be referenced
-    in the Sphinx documentation.
+    in the Sphinx documentation or when formatting the text output.
 
     Args:
         formatter: The Formatter object for the item tree.
@@ -146,6 +146,7 @@ class Item:
 
     @property
     def _format_func(self) -> Callable:
+        """Get the function for formatting the text output."""
         return lambda: None
 
     @property
@@ -166,7 +167,7 @@ class Item:
             formatter: A Formatter object for defining the formatting of the
                 new item. If 'None,' it uses the formatter of its parent item.
             item_id: A unique ID for the item that can be referenced in the
-                Sphinx documentation.
+                Sphinx documentation or when formatting the text output.
 
         Returns:
             The new Item object.
@@ -179,8 +180,8 @@ class Item:
         """Add a definition to be printed.
 
         This item displays a formatted definition in one of multiple styles.
-        Definitions consist of a term, an argument string and a message,
-        any of which can be blank.
+        The style is set by the Formatter instance. Definitions consist of a
+        term, an argument string and a message, any of which can be blank.
 
         Args:
             term: The command, option, etc. to be defined. If auto markup is
@@ -195,7 +196,7 @@ class Item:
             formatter: A Formatter instance for defining the formatting of the
                 new item. If 'None,' it uses the formatter of its parent item.
             item_id: A unique ID for the item that can be referenced in the
-                Sphinx documentation.
+                Sphinx documentation or when formatting the text output.
 
         Returns:
             The new Item object.

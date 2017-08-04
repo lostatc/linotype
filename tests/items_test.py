@@ -195,6 +195,7 @@ def test_definition_change_style_retroactively(formatter):
 
     assert root_item.format() == expected_output
 
+
 def test_nested_items_indent(formatter):
     """Nested items increase the indentation level."""
     root_item = Item(formatter)
