@@ -313,7 +313,7 @@ class LinotypeDirective(Directive):
             The root Node object of the tree.
         """
         root_node = nodes.definition_list()
-        if type(root_item) is not Item and root_item.content is not None:
+        if type(root_item) is not Item and root_item.parent:
             root_node += self._parse_item(root_item)
 
         # This keeps track of the current indentation level by maintaining a
@@ -373,7 +373,7 @@ class LinotypeDirective(Directive):
                 self.options["item_id"], raising=True)
 
         if "children" in self.options:
-            root_item.content = None
+            root_item.parent = None
 
         # Parse directive and extend item content.
         nested_nodes = nodes.paragraph()
@@ -381,7 +381,7 @@ class LinotypeDirective(Directive):
             self.content, self.content_offset, nested_nodes)
         def_list_index = nested_nodes.first_child_matching_class(
             nodes.definition_list)
-        if def_list_index:
+        if def_list_index is not None:
             definitions = _parse_definition_list(nested_nodes[def_list_index])
             _extend_item_content(definitions, root_item)
 

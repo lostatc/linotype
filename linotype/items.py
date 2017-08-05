@@ -130,7 +130,7 @@ class Item:
         formatter: The Formatter object for the item tree.
         id: The item ID.
         current_level: The current indentation level.
-        _parent: The parent Item object.
+        parent: The parent Item object.
         _format_func: The function used for formatting the text output.
         _current_indent: The number of spaces that the item is currently
             indented.
@@ -140,7 +140,7 @@ class Item:
         self.content = None
         self.formatter = formatter
         self.id = None
-        self._parent = None
+        self.parent = None
         self._current_indent = 0
         self._children = []
 
@@ -229,7 +229,7 @@ class Item:
                 "the item ID '{0}' is already in use".format(item_id))
 
         with contextlib.ExitStack() as stack:
-            if self.content is not None:
+            if self.parent:
                 stack.enter_context(self._indent())
 
             if formatter is None:
@@ -271,7 +271,7 @@ class Item:
         help_messages = []
         for item in self.get_items(levels=levels, item_id=item_id):
             item._current_indent -= dedent_amount
-            if item.content is not None:
+            if item.parent:
                 help_messages.append(item._format_item())
 
         return "\n".join([
@@ -304,7 +304,7 @@ class Item:
         Returns:
             The formatted text output as a string.
         """
-        if self.content is not None and self.formatter.visible:
+        if self.parent and self.formatter.visible:
             help_msg = self._format_func(self.content)
         else:
             help_msg = None
@@ -369,14 +369,14 @@ class Item:
         Returns:
             The root item in the tree.
         """
-        if not self._parent:
+        if not self.parent:
             return self
 
-        parent = self._parent
-        while parent._parent:
-            parent = parent._parent
+        parent_item = self.parent
+        while parent_item.parent:
+            parent = parent_item.parent
 
-        return parent
+        return parent_item
 
     @contextlib.contextmanager
     def _indent(self) -> None:
@@ -589,7 +589,7 @@ class TextItem(Item):
     Attributes:
         content: The content to display in the output.
         id: The item ID.
-        _parent: The parent Item object.
+        parent: The parent Item object.
         _format_func: The function used for formatting the text output.
         _current_indent: The number of spaces that the item is currently
             indented.
@@ -600,7 +600,7 @@ class TextItem(Item):
         super().__init__(formatter)
         self.content = content
         self.id = item_id
-        self._parent = parent
+        self.parent = parent
         self._current_indent = parent._current_indent
 
     @property
@@ -640,7 +640,7 @@ class DefinitionItem(Item):
     Attributes:
         content: The content to display in the output.
         id: The item ID.
-        _parent: The parent Item object.
+        parent: The parent Item object.
         _format_func: The function used for formatting the text output.
         _current_indent: The number of spaces that the item is currently
             indented.
@@ -651,7 +651,7 @@ class DefinitionItem(Item):
         super().__init__(formatter)
         self.content = content
         self.id = item_id
-        self._parent = parent
+        self.parent = parent
         self._current_indent = parent._current_indent
 
     @property
@@ -741,7 +741,7 @@ class DefinitionItem(Item):
             The number of spaces to buffer.
         """
         aligned_content = (
-            item.content for item in self._parent._children
+            item.content for item in self.parent._children
             if isinstance(item, type(self))
             and item.formatter.definition_style is DefinitionStyle.ALIGNED)
         try:
