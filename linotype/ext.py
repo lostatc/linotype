@@ -64,8 +64,12 @@ def _parse_definition_list(
         if classifier not in ["@replace", "@before", "@after"]:
             raise ValueError("unknown classifier '{0}'".format(classifier))
 
+        # Get the raw text from the Sphinx source file and then remove the
+        # first line containing the term and classifier so that just the
+        # content is left.
         content_index = node.first_child_matching_class(nodes.definition)
-        content = node[content_index].astext()
+        content = "\n".join(
+            node[content_index].parent.rawsource.splitlines()[1:])
 
         definitions[term] = (classifier, content)
 
