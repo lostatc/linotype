@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="linotype",
-    version="0.1.0-3",
+    version="0.1.0-6",
     description="Automatically format help messages.",
     long_descriptioin="See GitHub page for more details.",
     url="https://github.com/lostatc/linotype",
@@ -19,7 +19,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Topic :: Software Development :: Documentation"],
-    install_requires=[],
+    install_requires=["Sphinx"],
     python_requires=">=3.5",
     tests_require=["pytest"],
     packages=["linotype"])
