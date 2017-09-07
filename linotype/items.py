@@ -25,7 +25,7 @@ import functools
 import contextlib
 import collections
 from typing import (
-    Any, Tuple, Generator, Optional, NamedTuple, List, Type, Callable)
+    Any, Tuple, Generator, Optional, NamedTuple, List, Callable)
 
 from docutils.frontend import OptionParser
 from docutils.parsers.rst import Parser
@@ -205,7 +205,7 @@ class Item:
             DefinitionItem, [term, args, msg], formatter, item_id)
 
     def _add_item(
-            self, item_type: Type["Item"], content: Any,
+            self, item_type, content: Any,
             formatter: Optional[Formatter], item_id: Optional[str]) -> "Item":
         """Add a new item under the current item.
 
