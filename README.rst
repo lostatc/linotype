@@ -33,14 +33,24 @@ See Also
 `sphinx-argparse <https://github.com/ribozz/sphinx-argparse>`_
 
 .. |pypi| image:: http://i.imgur.com/YBnx42a.png
+    :alt: Python Package Index Logo
+    :target: PyPi_
 
 .. |debian| image:: http://i.imgur.com/VIh7ZRQ.png
+    :alt: Debian Logo
+    :target: Debian_
 
 .. |ubuntu| image:: http://i.imgur.com/aSLnnpI.png
+    :alt: Ubuntu Logo
+    :target: Ubuntu_
 
 .. |arch| image:: http://i.imgur.com/bEqgKym.png
+    :alt: Arch Logo
+    :target: Arch_
 
 .. |fedora| image:: http://i.imgur.com/ArSO3LM.png
+    :alt: Fedora Logo
+    :target: Fedora_
 
 .. _PyPi: https://pypi.python.org/pypi/linotype
 .. _Debian: https://build.opensuse.org/package/show/home:lostatc:linotype/python-linotype
