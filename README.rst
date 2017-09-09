@@ -22,11 +22,11 @@ more details.
 
 Install
 -------
-======== ======= ======== =======
-|pypi|   PyPi_   |arch|   Arch_
-|debian| Debian_ |fedora| Fedora_
-|ubuntu| Ubuntu_
-======== ======= ======== =======
+======== ======= ========== =========
+|pypi|   PyPi_   |arch|     Arch_
+|debian| Debian_ |fedora|   Fedora_
+|ubuntu| Ubuntu_ |opensuse| openSUSE_
+======== ======= ========== =========
 
 See Also
 --------
@@ -51,9 +51,14 @@ See Also
 .. |fedora| image:: http://i.imgur.com/ArSO3LM.png
     :alt: Fedora Logo
     :target: Fedora_
+    
+.. |opensuse| image:: http://i.imgur.com/XbVw6WD.png
+    :alt: openSUSE Logo
+    :target: openSUSE_
 
 .. _PyPi: https://pypi.python.org/pypi/linotype
 .. _Debian: https://build.opensuse.org/package/show/home:lostatc:linotype/python-linotype
 .. _Ubuntu: https://build.opensuse.org/package/show/home:lostatc:linotype/python-linotype
 .. _Arch: https://aur.archlinux.org/packages/python-linotype/
 .. _Fedora: https://copr.fedorainfracloud.org/coprs/lostatc/linotype/
+.. _openSUSE: https://build.opensuse.org/package/show/home:lostatc:linotype/python-linotype
