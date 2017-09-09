@@ -12,7 +12,7 @@ Line wrapping, indentation, alignment and markup are all applied automatically,
 making your help message easier to maintain so that you can focus on the
 content.
 
-This program focuses on providing more options for configuring your help
+This library focuses on providing more options for configuring your help
 message than **argparse** in the Python standard library. It gives you full
 control over the structure and formatting and allows you to do many things that
 are impossible with **argparse** alone. See the full documentation below for
@@ -20,8 +20,8 @@ more details.
 
 `Documentation <https://linotype.readthedocs.io/en/latest/index.html>`_
 
-Install
--------
+Package Repositories
+--------------------
 ======== ======= ========== =========
 |pypi|   PyPi_   |arch|     Arch_
 |debian| Debian_ |fedora|   Fedora_
@@ -51,7 +51,7 @@ See Also
 .. |fedora| image:: http://i.imgur.com/ArSO3LM.png
     :alt: Fedora Logo
     :target: Fedora_
-    
+
 .. |opensuse| image:: http://i.imgur.com/XbVw6WD.png
     :alt: openSUSE Logo
     :target: openSUSE_
