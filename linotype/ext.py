@@ -108,6 +108,21 @@ def _extend_item_content(
             item.content[2] = revised_content
 
 
+def _get_last_matching_child(
+        parent_node: nodes.Element, child_class: nodes.Element):
+    """Get the last child node that matches a Node subclass.
+
+    Args:
+        parent_node: The node to find the child of.
+        child_class: The Node subclass to check against.
+
+    Returns:
+        The last child Node object that is an instance of the given class.
+    """
+    for child_node in reversed(parent_node.children):
+        if isinstance(child_node, child_class):
+            return child_node
+
 class LinotypeDirective(Directive):
     """Convert items into docutils nodes."""
     has_content = True
@@ -272,11 +287,8 @@ class LinotypeDirective(Directive):
             else:
                 text, text_positions = item.parse_manual_markup(text)
 
-            node = [
-                nodes.paragraph(
-                    "", "", *self._apply_markup(text, text_positions, None)),
-                nodes.definition_list_item(
-                    "", nodes.term(), nodes.definition())]
+            node = nodes.paragraph(
+                "", "", *self._apply_markup(text, text_positions, None))
         elif isinstance(item, DefinitionItem):
             term, args, msg = item.content
             if "no_manual_markup" in self.options:
@@ -290,7 +302,7 @@ class LinotypeDirective(Directive):
             auto_args_positions = item.parse_args_markup(args)
             auto_msg_positions = item.parse_msg_markup(args, msg)
 
-            node = [nodes.definition_list_item(
+            node = nodes.definition_list_item(
                     "", nodes.term(
                         "", "", *self._apply_markup(
                             term, term_positions, auto_term_positions),
@@ -300,72 +312,87 @@ class LinotypeDirective(Directive):
                     nodes.definition(
                         "", nodes.paragraph(
                             "", "", *self._apply_markup(
-                                msg, msg_positions, auto_msg_positions))))]
+                                msg, msg_positions, auto_msg_positions))))
         else:
             raise ValueError("unrecognized item type '{0}'".format(type(item)))
 
         return node
 
-    def _parse_tree(self, root_item: Item) -> nodes.Node:
-        """Recursively iterate over an Item object to generate Node objects.
+    def _parse_tree(self, root_item: Item) -> List[nodes.Node]:
+        """Convert a tree of Item objects to a tree of Node objects.
+        
+        Docutils definitions are used for indentation.
 
         Args:
             root_item: The Item object to convert to a tree of docutils
                 Node objects.
 
         Returns:
-            The root Node object of the tree.
+            The list of Node objects that make up the root of the tree.
         """
-        root_node = nodes.definition_list()
+        root_node = nodes.section()
+        parent_node = root_node
+        previous_level = root_item.current_level
+
         if type(root_item) is not Item and root_item.parent:
-            root_node += self._parse_item(root_item)
+            # The root item is to be included in the output.
+            root_node.append(self._parse_item(root_item))
+        else:
+            # The root item is not to be included in the output.
+            previous_level += 1
 
         # This keeps track of the current indentation level by maintaining a
         # queue with the current parent node on the right and all of its
         # ancestors up the tree moving to the left.
         ancestor_nodes = collections.deque()
-
-        parent_node = root_node
-        current_level = 0
-
+        
         for item in root_item.get_items():
             if item is root_item:
                 continue
-
-            if item.current_level > current_level:
+                
+            if item.current_level > previous_level:
                 # The indentation level increased.
                 ancestor_nodes.append(parent_node)
 
-                # Set the parent node equal to the first definition in the
-                # last definition_list_item belonging to the current parent
-                # node.
+                if not isinstance(parent_node[-1], nodes.definition_list):
+                    # Create a new empty definition to act as a starting
+                    # point for new nodes. 
+                    parent_node.append(nodes.definition_list(
+                        "", nodes.definition_list_item(
+                            "", nodes.term(), nodes.definition())))
+
                 if parent_node.children:
-                    def_list_index = (
-                        parent_node.first_child_matching_class(
-                            nodes.definition_list_item, start=-1, end=0))
-                    def_list = parent_node[def_list_index]
-                    def_index = def_list.first_child_matching_class(
-                        nodes.definition)
-                    parent_node = parent_node[def_list_index][def_index]
-
-                # Append a new definition_list to the current parent node
-                # and set the parent node equal to it.
-                parent_node += nodes.definition_list()
-                parent_node = parent_node[-1]
-
-            elif item.current_level < current_level:
+                    # Set the parent node equal to the last definition in 
+                    # the last definition_list_item in the last 
+                    # definition_list belonging to the current parent node. 
+                    definition_list = _get_last_matching_child(
+                        parent_node, nodes.definition_list)
+                    definition_list_item = _get_last_matching_child(
+                        definition_list, nodes.definition_list_item)
+                    definition = _get_last_matching_child(
+                        definition_list_item, nodes.definition)
+                    parent_node = definition
+            elif item.current_level < previous_level:
                 # The indentation level decreased.
-                for i in range(current_level - item.current_level):
-                    past_parent = ancestor_nodes.pop()
-                parent_node = past_parent
+                for i in range(previous_level - item.current_level):
+                    new_parent = ancestor_nodes.pop()
+                parent_node = new_parent
 
-            parent_node += self._parse_item(item)
-            current_level = item.current_level
+            if isinstance(item, DefinitionItem):
+                # Wrap definitions in a definition_list.
+                if not parent_node.children or not isinstance(
+                        parent_node[-1], nodes.definition_list):
+                    parent_node.append(nodes.definition_list())
+                parent_node[-1].append(self._parse_item(item))
+            else:
+                parent_node.append(self._parse_item(item))
+                
+            previous_level = item.current_level
 
-        return root_node
+        return root_node.children
 
     def run(self) -> List[nodes.Node]:
-        """Convert an Item object to a docutils Node tree.
+        """Run the directive.
 
         Returns:
             A list of Node objects.
@@ -389,7 +416,7 @@ class LinotypeDirective(Directive):
             definitions = _parse_definition_list(nested_nodes[def_list_index])
             _extend_item_content(definitions, root_item)
 
-        return [self._parse_tree(root_item)]
+        return self._parse_tree(root_item)
 
 
 def setup(app) -> None:

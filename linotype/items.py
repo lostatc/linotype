@@ -134,15 +134,15 @@ class Item:
         _format_func: The function used for formatting the text output.
         _current_indent: The number of spaces that the item is currently
             indented.
-        _children: A list of all Item objects belonging to this item.
+        children: A list of all Item objects belonging to this item.
     """
     def __init__(self, formatter: Formatter) -> None:
         self.content = None
         self.formatter = formatter
         self.id = None
         self.parent = None
+        self.children = []
         self._current_indent = 0
-        self._children = []
 
     @property
     def _format_func(self) -> Callable:
@@ -238,7 +238,7 @@ class Item:
                 formatter = copy.copy(self.formatter)
 
             new_item = item_type(content, self, formatter, item_id)
-            self._children.append(new_item)
+            self.children.append(new_item)
 
         return new_item
 
@@ -329,7 +329,7 @@ class Item:
         yield item
 
         if levels is None or counter < levels:
-            for item in item._children:
+            for item in item.children:
                 yield from self._depth_search(
                     item, levels, counter=counter+1)
 
@@ -741,7 +741,7 @@ class DefinitionItem(Item):
             The number of spaces to buffer.
         """
         aligned_content = (
-            item.content for item in self.parent._children
+            item.content for item in self.parent.children
             if isinstance(item, type(self))
             and item.formatter.definition_style is DefinitionStyle.ALIGNED)
         try:
