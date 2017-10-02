@@ -203,6 +203,10 @@ class LinotypeDirective(Directive):
         if auto_positions is None:
             auto_positions = MarkupPositions([], [])
 
+        # Get the start and end positions of each substring that should have
+        # markup applied. These are referred to as "spans." Create a list
+        # of tuples where each tuple has the format:
+        # ((start, end), markup_type).
         markup_spans = []
         for markup_type in ["strong", "em"]:
             combined_positions = []
@@ -221,18 +225,33 @@ class LinotypeDirective(Directive):
         markup_spans.sort(key=lambda x: x[0][0])
 
         def parse_top_level(markup_spans, parent_span):
-            # Get top-level spans and include spans without any markup.
+            """Parse nested spans to create Node objects.
+
+            This function works from the outside in, parsing one level of
+            nested spans at a time.
+
+            Args:
+                markup_spans: A list of spans in the form:
+                    ((start, end), markup_type).
+                parent_span: The span containing the current list of spans in
+                    the form: (start, end).
+
+            Returns:
+                A list of docutils Node objects.
+            """
+            # Get a list of top-level spans, including spans without any
+            # markup.
             prev_end = parent_span[0]
             top_level_spans = []
             for (start, end), markup_type in markup_spans:
-                if start < prev_end or (start, end) == parent_span:
+                if start < prev_end:
+                    # This span is nested inside another span.
                     continue
 
                 top_level_spans.append(((prev_end, start), None))
                 top_level_spans.append(((start, end), markup_type))
 
                 prev_end = end
-
             top_level_spans.append(((prev_end, parent_span[1]), None))
 
             # Create nodes from those spans.
