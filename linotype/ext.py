@@ -334,12 +334,18 @@ class LinotypeDirective(Directive):
         parent_node = root_node
         previous_level = root_item.current_level
 
-        if type(root_item) is not Item and root_item.parent:
-            # The root item is to be included in the output.
-            root_node.append(self._parse_item(root_item))
-        else:
-            # The root item is not to be included in the output.
-            previous_level += 1
+        if type(root_item) is not Item:
+            if root_item.parent:
+                # The root item is to be included in the output.
+                if isinstance(root_item, DefinitionItem):
+                    definition_list = nodes.definition_list()
+                    definition_list.append(self._parse_item(root_item))
+                    root_node.append(definition_list)
+                else:
+                    root_node.append(self._parse_item(root_item))
+            else:
+                # The root item is not to be included in the output.
+                previous_level += 1
 
         # This keeps track of the current indentation level by maintaining a
         # queue with the current parent node on the right and all of its
