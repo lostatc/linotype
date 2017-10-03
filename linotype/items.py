@@ -422,6 +422,7 @@ class Item:
             elif initial_match_string == MARKUP_CHARS.em[0]:
                 end_pattern = inliner.patterns.emphasis
             else:
+                remaining = text[start_match_end:]
                 continue
 
             end_match = end_pattern.search(
