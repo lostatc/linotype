@@ -8,11 +8,10 @@ newline character.
 .. code-block:: python
     :linenos:
 
-    from linotype import Formatter, Item
+    from linotype import Item
 
     def help_message():
-        formatter = Formatter()
-        root_item = Item(formatter)
+        root_item = Item()
 
         root_item.add_text("This line comes before the break.")
         root_item.add_text("\n")
@@ -91,11 +90,10 @@ This can be accomplished by assigning item IDs.
 .. code-block:: python
     :linenos:
 
-    from linotype import Formatter, Item
+    from linotype import Item
 
     def help_message():
-        formatter = Formatter()
-        root_item = Item(formatter)
+        root_item = Item()
 
         usage = root_item.add_text("Usage:", item_id="usage")
         usage.add_definition(
@@ -152,11 +150,10 @@ invisible via a **Formatter** class. The first method is shown below.
 .. code-block:: python
     :linenos:
 
-    from linotype import Formatter, Item
+    from linotype import Item
 
     def help_message():
-        formatter = Formatter()
-        root_item = Item(formatter)
+        root_item = Item()
 
         commands = root_item.add_text("Commands:")
 

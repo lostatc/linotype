@@ -16,11 +16,10 @@ message:
 .. code-block:: python
     :linenos:
 
-    from linotype import Formatter, Item
+    from linotype import Item
 
     def help_message():
-        formatter = Formatter()
-        root_item = Item(formatter)
+        root_item = Item()
 
         usage = root_item.add_text("Usage:")
         usage.add_definition(

@@ -35,7 +35,7 @@ from linotype.ansi import ansi_format
 
 ARG_REGEX = re.compile(r"([\w-]+)")
 MARKUP_CHARS = collections.namedtuple(
-    "MarkupChars", ["strong", "em"])(("**", "**"), ("*", "*"))
+    "MARKUP_CHARS", ["strong", "em"])("**", "*")
 
 # This keeps track of the positions of marked-up substrings in a string.
 # Each tuple contains the substring and the instance of that substring for
@@ -136,7 +136,7 @@ class Item:
             indented.
         children: A list of all Item objects belonging to this item.
     """
-    def __init__(self, formatter: Formatter) -> None:
+    def __init__(self, formatter=Formatter()) -> None:
         self.content = None
         self.formatter = formatter
         self.id = None
@@ -410,63 +410,74 @@ class Item:
 
         strong_spans = []
         em_spans = []
-        remaining = text
-        while inliner.patterns.initial.search(remaining):
-            initial_match = inliner.patterns.initial.search(text)
-            start_match_start = initial_match.start("start")
-            start_match_end = initial_match.end("start")
-            initial_match_string = initial_match.groupdict()["start"]
-
-            if initial_match_string == MARKUP_CHARS.strong[0]:
-                end_pattern = inliner.patterns.strong
-            elif initial_match_string == MARKUP_CHARS.em[0]:
-                end_pattern = inliner.patterns.emphasis
-            else:
-                remaining = text[start_match_end:]
+        previous_match_end = 0
+        offset = 0  # Adjust for characters removed from the original string.
+        for initial_match in inliner.patterns.initial.finditer(text):
+            initial_match_start = initial_match.start() + offset
+            initial_match_end = initial_match.end() + offset
+            if initial_match_start < previous_match_end:
+                # The current initial match comes before the previous match.
                 continue
 
+            previous_match_end = initial_match_end
+
+            # Determine what type of markup it is.
+            initial_match_string = initial_match.groupdict()["start"]
+            if initial_match_string == MARKUP_CHARS.strong:
+                end_pattern = inliner.patterns.strong
+            elif initial_match_string == MARKUP_CHARS.em:
+                end_pattern = inliner.patterns.emphasis
+            else:
+                continue
+
+            # Search the end markup that corresponds to the initial markup.
             end_match = end_pattern.search(
-                initial_match.string[start_match_end:])
+                initial_match.string[initial_match_end:])
+
             if not end_match:
                 # Opening markup without closing markup is left alone. This
                 # prevents that opening markup from creating an infinite loop
                 # where it is matched over and over again.
-                remaining = text[start_match_end:]
                 continue
-            end_match_start = end_match.start(1) + start_match_end
-            end_match_end = end_match.end(1) + start_match_end
 
-            substring = text[start_match_end:end_match_start]
-            position = (
-                start_match_end - len(initial_match_string),
+            end_match_start = end_match.start() + initial_match_end + offset
+            end_match_end = end_match.end() + initial_match_end + offset
+
+            content = text[initial_match_end:end_match_start]
+            span = (
+                initial_match_end - len(initial_match_string),
                 end_match_start - len(initial_match_string))
 
-            if initial_match_string == MARKUP_CHARS.strong[0]:
-                strong_spans.append((substring, position))
-            elif initial_match_string == MARKUP_CHARS.em[0]:
-                em_spans.append((substring, position))
+            if initial_match_string == MARKUP_CHARS.strong:
+                strong_spans.append((content, span))
+            elif initial_match_string == MARKUP_CHARS.em:
+                em_spans.append((content, span))
 
-            text = text[:start_match_start] + substring + text[end_match_end:]
-            remaining = text[end_match_end:]
+            # Remove markup characters from the string and keep track of the
+            # index offset.
+            new_text = text[:initial_match_start] + content + text[end_match_end:]
+            offset -= len(text) - len(new_text)
+            text = new_text
+            previous_match_end = end_match_end
 
         markup_positions = MarkupPositions([], [])
 
         # Record the substring that should be marked up as 'strong' and the
         # instance of it if it occurs multiple times in the text.
-        for substring, span in strong_spans:
+        for content, span in strong_spans:
             match_counter = 0
-            for match in re.finditer(re.escape(substring), text):
+            for match in re.finditer(re.escape(content), text):
                 if match.span() == span:
-                    markup_positions.strong.append((substring, match_counter))
+                    markup_positions.strong.append((content, match_counter))
                 match_counter += 1
 
         # Record the substring that should be marked up as 'emphasized' and the
         # instance of it if it occurs multiple times in the text.
-        for substring, span in em_spans:
+        for content, span in em_spans:
             match_counter = 0
-            for match in re.finditer(re.escape(substring), text):
+            for match in re.finditer(re.escape(content), text):
                 if match.span() == span:
-                    markup_positions.em.append((substring, match_counter))
+                    markup_positions.em.append((content, match_counter))
                 match_counter += 1
 
         return text, markup_positions
