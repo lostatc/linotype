@@ -176,7 +176,7 @@ class LinotypeDirective(Directive):
     option_spec = {
         "module": unchanged,
         "filepath": unchanged,
-        "func": unchanged,
+        "function": unchanged,
         "item_id": unchanged,
         "children": flag,
         "no_auto_markup": flag,
@@ -189,10 +189,10 @@ class LinotypeDirective(Directive):
             The output of the specified function from the specified module or
             file.
         """
-        if "module" in self.options and "func" in self.options:
+        if "module" in self.options and "function" in self.options:
             # Import from given module.
             module_name = self.options["module"]
-            func_name = self.options["func"]
+            function_name = self.options["function"]
 
             try:
                 given_module = importlib.import_module(module_name)
@@ -200,27 +200,27 @@ class LinotypeDirective(Directive):
                 raise self.error(
                     "failed to import module '{0}'".format(module_name))
 
-            if not hasattr(given_module, func_name):
+            if not hasattr(given_module, function_name):
                 raise self.error("module '{0}' has no attribute '{1}'".format(
-                    module_name, func_name))
+                    module_name, function_name))
 
-            func = getattr(given_module, func_name)
+            func = getattr(given_module, function_name)
 
-        elif "filepath" in self.options and "func" in self.options:
+        elif "filepath" in self.options and "function" in self.options:
             # Import from given file.
             filepath = self.options["filepath"]
-            func_name = self.options["func"]
+            function_name = self.options["function"]
             local_dict = {}
 
             file = open(os.path.abspath(filepath))
             code = compile(file.read(), filepath, "exec")
             exec(code, local_dict)
 
-            func = local_dict[func_name]
+            func = local_dict[function_name]
 
         else:
             raise self.error(
-                "both :func: and either :module: or :filepath: must be "
+                "both :function: and either :module: or :filepath: must be "
                 "specified.")
 
         return func()

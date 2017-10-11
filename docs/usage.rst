@@ -51,7 +51,7 @@ list of **Sphinx** extensions in the *conf.py* file for your project:
 The documentation can be imported into your **Sphinx** documentation using the
 'linotype' directive. It accepts the following options:
 
-\:func\:
+\:function\:
     The name of the function which returns an **Item** object.
 
 \:module\:
@@ -74,8 +74,8 @@ The documentation can be imported into your **Sphinx** documentation using the
 \:no_manual_markup\:
     Do not parse 'strong' and 'emphasized' inline markup.
 
-The options :module: and :filepath: are mutually exclusive. The options :func:
-and either :module: or :filepath: are required.
+The options :module: and :filepath: are mutually exclusive. The options
+:function: and either :module: or :filepath: are required.
 
 Using the 'linotype' directive, you can extend or replace parts of your help
 message. This allows you to add new content that appears in your **Sphinx**
@@ -113,7 +113,7 @@ Here is an example of a **Sphinx** source file using the directive:
 
     .. linotype::
         :module: zielen.cli
-        :func: help_message
+        :function: help_message
 
         initialize
             This content is added after the existing content for the item with

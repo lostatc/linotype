@@ -65,7 +65,7 @@ def test_option_module():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_test_item
+            :function: get_test_item
         """)
 
     expected = textwrap.dedent("""\
@@ -114,7 +114,7 @@ def test_option_filepath():
     rst = textwrap.dedent("""\
         .. linotype::
             :filepath: {0}
-            :func: get_test_item
+            :function: get_test_item
         """.format(__file__))
 
     expected = textwrap.dedent("""\
@@ -160,7 +160,7 @@ def test_option_item_id():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_test_item
+            :function: get_test_item
             :item_id: text
         """)
 
@@ -192,7 +192,7 @@ def test_option_children():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_test_item
+            :function: get_test_item
             :item_id: text
             :children:
         """)
@@ -213,7 +213,7 @@ def test_option_no_auto_markup():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_test_item
+            :function: get_test_item
             :no_auto_markup:
         """)
 
@@ -250,7 +250,7 @@ def test_option_no_manual_markup():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_test_item
+            :function: get_test_item
             :no_manual_markup:
         """)
 
@@ -294,7 +294,7 @@ def test_extend_text_item():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_test_item
+            :function: get_test_item
             
             text
                 This comes after the existing content.
@@ -343,7 +343,7 @@ def test_extend_definition_item():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_test_item
+            :function: get_test_item
             
             definition
                 This comes after the existing content.
@@ -392,7 +392,7 @@ def test_extend_auto_with_markup():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_simple_test_item
+            :function: get_simple_test_item
             
             text
                 This comes **after** the existing content.
@@ -420,7 +420,7 @@ def test_extend_auto_with_unsupported_markup():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_simple_test_item
+            :function: get_simple_test_item
             
             text
                 This doesn't allow for 
@@ -452,7 +452,7 @@ def test_extend_auto_unclosed_markup():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_simple_test_item
+            :function: get_simple_test_item
             
             text
                 This comes **after** the *existing content.
@@ -480,7 +480,7 @@ def test_extend_auto_before():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_simple_test_item
+            :function: get_simple_test_item
             
             text : @before
                 This comes before the existing content.
@@ -505,7 +505,7 @@ def test_extend_auto_replace():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_simple_test_item
+            :function: get_simple_test_item
             
             text : @replace
                 This replaces the existing content.
@@ -527,7 +527,7 @@ def test_extend_rst():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_simple_test_item
+            :function: get_simple_test_item
             
             text : @rst
                 This allows for
@@ -559,7 +559,7 @@ def test_extend_rst_before():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_simple_test_item
+            :function: get_simple_test_item
             
             text : @rst : @before
                 This allows for
@@ -591,7 +591,7 @@ def test_extend_rst_replace():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_simple_test_item
+            :function: get_simple_test_item
             
             text : @rst : @replace
                 This allows for
@@ -619,7 +619,7 @@ def test_extend_multiple():
     rst = textwrap.dedent("""\
         .. linotype::
             :module: tests.ext_test
-            :func: get_simple_test_item
+            :function: get_simple_test_item
             
             text
                 This comes **after** the existing content.

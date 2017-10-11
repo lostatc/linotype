@@ -121,7 +121,7 @@ This is what your **Sphinx** source file could look like:
     ========
     .. linotype::
         :module: zielen.cli
-        :func: help_message
+        :function: help_message
         :item_id: usage
         :children:
 
@@ -134,7 +134,7 @@ This is what your **Sphinx** source file could look like:
     ==============
     .. linotype::
         :module: zielen.cli
-        :func: help_message
+        :function: help_message
         :item_id: global
         :children:
 
