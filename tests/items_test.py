@@ -1,4 +1,4 @@
-"""Test 'formatter.py'.
+"""Test 'items.py'.
 
 Copyright © 2017 Garrett Powell <garrett@gpowell.net>
 

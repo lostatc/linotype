@@ -1,6 +1,6 @@
 Usage
 =====
-Documentation in **linotype** consist of a tree of 'items' of which there are
+Documentation in **linotype** consists of a tree of 'items' of which there are
 currently two types, *text* and *definitions*. Every item can contain zero or
 more other items, and every level of nested items increases the indentation
 level. The **Item** class is used to create a root-level item, and every
@@ -68,11 +68,11 @@ The documentation can be imported into your **Sphinx** documentation using the
     Display the item's children but not the item itself.
 
 \:no_auto_markup\:
-    Do not automatically apply **strong** and *emphasized* formatting to the
+    Do not automatically apply 'strong' and 'emphasized' formatting to the
     output.
 
 \:no_manual_markup\:
-    Do not parse reStructuredText inline markup.
+    Do not parse 'strong' and 'emphasized' inline markup.
 
 The options :module: and :filepath: are mutually exclusive. The options :func:
 and either :module: or :filepath: are required.
@@ -81,17 +81,30 @@ Using the 'linotype' directive, you can extend or replace parts of your help
 message. This allows you to add new content that appears in your **Sphinx**
 documentation but not in your text output. This is done on a per-item basis
 using a reStructuredText definition list, where the term is the ID of an item
-and the definition is the new text to use. You can also add a classifier, which
-changes how the new text is incorporated:
+and the definition is the new content to use. You can also add classifiers,
+which change how the new content is incorporated.
 
-@before
-    Insert the new text before the existing text.
+These classifiers affect where the content is added:
 
 @after
-    Insert the new text after the existing text. This is the default.
+    Add the new content after the existing content. This is the default.
+
+@before
+    Add the new content before the existing content.
 
 @replace
-    Replace the existing text with the new text.
+    Replace the existing content with the new content.
+
+These classifiers affect how markup is applied to the content:
+
+@auto
+    Markup is applied to the text automatically, and 'strong' and 'emphasized'
+    inline markup can be applied manually. This is the default.
+
+@rst
+    Markup is not applied automatically, but any reStructuredText body or
+    inline elements can be used. The new content starts in a separate
+    paragraph.
 
 Here is an example of a **Sphinx** source file using the directive:
 
@@ -103,9 +116,13 @@ Here is an example of a **Sphinx** source file using the directive:
         :func: help_message
 
         initialize
-            This text is inserted after the existing text for the item with the
-            ID 'initialize.'
+            This content is added after the existing content for the item with
+            the ID 'initialize.' Markup is applied automatically.
+
+        initialize : @before : @rst
+            This content is added before the existing content for the item with
+            the ID 'initialize.' reStrcturedText elements can be used.
 
         sync : @replace
-            This text replaces the existing text for the item with the ID
-            'sync.'
+            This content replaces the existing content for the item with the ID
+            'sync.' Markup is applied automatically.
