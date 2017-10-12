@@ -97,16 +97,11 @@ This can be accomplished by assigning item IDs.
 
         usage = root_item.add_text("Usage:", item_id="usage")
         usage.add_definition(
-            "zielen", "[global_options] command [command_options] [command_args]",
-            "")
+            "codot", "[global_options] command [command_args]", "")
 
         global_opts = root_item.add_text("Global Options:", item_id="global")
         global_opts.add_definition(
-            "--help", "",
-            "Print a usage message and exit.")
-        global_opts.add_definition(
-            "--version", "",
-            "Print the version number and exit.")
+            "--help", "", "Print a usage message and exit.")
 
         return root_item
 
@@ -120,20 +115,20 @@ This is what your **Sphinx** source file could look like:
     SYNOPSIS
     ========
     .. linotype::
-        :module: zielen.cli
+        :module: codot.cli
         :function: help_message
         :item_id: usage
         :children:
 
     DESCRIPTION
     ===========
-    zielen is a program for conserving disk space by distributing files based
-    on how frequently they are accessed.
+    codot is a program for consolidating your dotfiles so that settings for
+    multiple applications can be modified from one set of files.
 
     GLOBAL OPTIONS
     ==============
     .. linotype::
-        :module: zielen.cli
+        :module: codot.cli
         :function: help_message
         :item_id: global
         :children:
@@ -141,11 +136,15 @@ This is what your **Sphinx** source file could look like:
 Hide message details
 --------------------
 To improve readability, you may want to hide certain details in your help
-message under certain circumstances. One example would be to have a global help
+message under certain circumstances. One example would be to have a main help
 message that displays an overview of all commands and then a separate help
-message with more details for each command. This can be accomplished by
-limiting the number of levels of nested items to descend into or by making some
-items invisible via a **Formatter** class. The first method is shown below.
+message with more details for each command. This can be accomplished by:
+
+1. Limiting the number of levels of nested items to descend into.
+2. Conditionally making some items invisible via a **Formatter** class.
+3. Creating a separate function for the per-command help messages.
+
+The first way is shows below.
 
 .. code-block:: python
     :linenos:
@@ -157,21 +156,19 @@ items invisible via a **Formatter** class. The first method is shown below.
 
         commands = root_item.add_text("Commands:")
 
-        initialize_cmd = commands.add_definition(
-            "initialize", "[options] name",
-            "Create a new profile, called name, representing a pair of "
-            "directories to sync.",
-            item_id="initialize")
-        initialize_cmd.add_definition(
-            "-e, --exclude", "file",
-            "Get patterns from file representing files and directories to "
-            "exclude from syncing.")
+        add_template_cmd = commands.add_definition(
+            "add-template", "[options] files...",
+            "Open one or more source files in your editor and save them each "
+            "as a template file.", item_id="add-template")
+        add_template_cmd.add_definition(
+            "-r, --revise", "",
+            "If the template file already exists, edit it instead of "
+            "creating a new one.")
 
-        sync_cmd = commands.add_definition(
-            "sync", "name|path",
-            "Bring the local and remote directories in sync and redistribute "
-            "files based on their priorities.",
-            item_id="sync")
+        role_cmd = commands.add_definition(
+            "role", "[role_name [config_name]]",
+            "Make config_name the currently selected config file in the role "
+            "named role_name.", item_id="role")
 
         return root_item
 

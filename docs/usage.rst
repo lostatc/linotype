@@ -1,11 +1,10 @@
 Usage
 =====
 Documentation in **linotype** consists of a tree of 'items' of which there are
-currently two types, *text* and *definitions*. Every item can contain zero or
-more other items, and every level of nested items increases the indentation
-level. The **Item** class is used to create a root-level item, and every
-**Item** object has public methods for creating new sub-items which in turn
-return a new **Item** object.
+currently two types, *text* and *definitions*. Every item can contain other
+items which are indented relative to the parent item. The **Item** class is
+used to create a root-level item, and every **Item** object has public methods
+for creating new sub-items which in turn return a new **Item** object.
 
 Every **Item** object accepts a **Formatter** instance which is used to define
 how items are formatted in the text output. Every item can optionally be
@@ -23,8 +22,7 @@ message:
 
         usage = root_item.add_text("Usage:")
         usage.add_definition(
-            "codot", "[global_options] command [command_options] [command_args]",
-            "")
+            "codot", "[global_options] command [command_args]", "")
 
         return root_item
 
@@ -87,13 +85,13 @@ which change how the new content is incorporated.
 These classifiers affect where the content is added:
 
 @after
-    Add the new content after the existing content. This is the default.
+    The new content is added after the existing content. This is the default.
 
 @before
-    Add the new content before the existing content.
+    The new content is added before the existing content.
 
 @replace
-    Replace the existing content with the new content.
+    The new content replaces the existing content.
 
 These classifiers affect how markup is applied to the content:
 
@@ -112,17 +110,17 @@ Here is an example of a **Sphinx** source file using the directive:
     :linenos:
 
     .. linotype::
-        :module: zielen.cli
+        :module: codot.cli
         :function: help_message
 
-        initialize
+        add-template
             This content is added after the existing content for the item with
-            the ID 'initialize.' Markup is applied automatically.
+            the ID 'add-template.' Markup is applied automatically.
 
-        initialize : @before : @rst
+        add-template : @before : @rst
             This content is added before the existing content for the item with
-            the ID 'initialize.' reStrcturedText elements can be used.
+            the ID 'add-template.' reStrcturedText elements can be used.
 
-        sync : @replace
+        role : @replace
             This content replaces the existing content for the item with the ID
-            'sync.' Markup is applied automatically.
+            'role.' Markup is applied automatically.
