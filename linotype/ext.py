@@ -168,6 +168,94 @@ def _extend_rst(
             extendable_node.children = content.nodes
 
 
+def _apply_markup(text: str, positions: MarkupPositions) -> List[nodes.Node]:
+    """Convert markup to a list of nodes.
+
+    This method supports nested markup.
+
+    Args:
+        text: The text to apply markup to.
+        positions: The positions of substrings to apply markup to.
+
+    Returns:
+        A list of Node objects.
+    """
+    # Get the start and end positions of each substring that should have
+    # markup applied. These are referred to as "spans." Create a list
+    # of tuples where each tuple has the format:
+    # ((start, end), markup_type).
+    markup_spans = []
+    for markup_type in ["strong", "em"]:
+        # Get the positions of each substring in the string.
+        for substring, instance in getattr(positions, markup_type):
+            match = list(re.finditer(re.escape(substring), text))[instance]
+            markup_spans.append((match.span(), markup_type))
+
+    # Order the spans by their start position.
+    markup_spans.sort(key=lambda x: x[0][0])
+
+    def parse_top_level(markup_spans, parent_span):
+        """Parse nested spans to create Node objects.
+
+        This function works from the outside in, parsing one level of
+        nested spans at a time.
+
+        Args:
+            markup_spans: A list of spans in the form:
+                ((start, end), markup_type).
+            parent_span: The span containing the current list of spans in
+                the form: (start, end).
+
+        Returns:
+            A list of docutils Node objects.
+        """
+        # Get a list of top-level spans, including spans without any
+        # markup.
+        prev_end = parent_span[0]
+        top_level_spans = []
+        for (start, end), markup_type in markup_spans:
+            if start < prev_end:
+                # This span is nested inside another span.
+                continue
+
+            top_level_spans.append(((prev_end, start), None))
+            top_level_spans.append(((start, end), markup_type))
+
+            prev_end = end
+        top_level_spans.append(((prev_end, parent_span[1]), None))
+
+        # Create nodes from those spans.
+        top_level_nodes = []
+        for (start, end), markup_type in top_level_spans:
+            if markup_type is None:
+                top_level_nodes.append(nodes.Text(text[start:end]))
+            elif markup_type == "strong":
+                top_level_nodes.append(nodes.strong())
+            elif markup_type == "em":
+                top_level_nodes.append(nodes.emphasis())
+
+        # Iterate over nested spans and add those nodes to their parent
+        # nodes.
+        for i, ((start, end), markup_type) in enumerate(top_level_spans):
+            if markup_type is None:
+                continue
+
+            nested_spans = []
+            for (nested_start, nested_end), nested_type in markup_spans:
+                if (nested_start in range(start, end)
+                        and nested_end in range(start, end + 1)
+                        and (nested_start, nested_end) != (start, end)):
+                    nested_spans.append(
+                        ((nested_start, nested_end), nested_type))
+
+            top_level_nodes[i] += parse_top_level(
+                nested_spans, (start, end))
+
+        return top_level_nodes
+
+    return parse_top_level(markup_spans, (0, len(text)))
+
+
 class LinotypeDirective(Directive):
     """Convert items into docutils nodes."""
     has_content = True
@@ -225,111 +313,6 @@ class LinotypeDirective(Directive):
 
         return func()
 
-    def _apply_markup(
-            self, text: str, manual_positions: MarkupPositions,
-            auto_positions: MarkupPositions) -> List[nodes.Node]:
-        """Convert markup to a list of nodes.
-
-        This method supports nested markup.
-
-        Args:
-            text: The text to apply markup to.
-            manual_positions: The positions of substrings to apply manual
-                markup to.
-            auto_positions: The positions of substrings to apply auto markup
-                to.
-
-        Returns:
-            A list of Node objects.
-        """
-        if manual_positions is None:
-            manual_positions = MarkupPositions([], [])
-
-        if auto_positions is None:
-            auto_positions = MarkupPositions([], [])
-
-        # Get the start and end positions of each substring that should have
-        # markup applied. These are referred to as "spans." Create a list
-        # of tuples where each tuple has the format:
-        # ((start, end), markup_type).
-        markup_spans = []
-        for markup_type in ["strong", "em"]:
-            combined_positions = []
-
-            if "no_manual_markup" not in self.options:
-                combined_positions += getattr(manual_positions, markup_type)
-            if "no_auto_markup" not in self.options:
-                combined_positions += getattr(auto_positions, markup_type)
-
-            # Get the positions of each substring in the string.
-            for substring, instance in combined_positions:
-                match = list(re.finditer(re.escape(substring), text))[instance]
-                markup_spans.append((match.span(), markup_type))
-
-        # Order the spans by their start position.
-        markup_spans.sort(key=lambda x: x[0][0])
-
-        def parse_top_level(markup_spans, parent_span):
-            """Parse nested spans to create Node objects.
-
-            This function works from the outside in, parsing one level of
-            nested spans at a time.
-
-            Args:
-                markup_spans: A list of spans in the form:
-                    ((start, end), markup_type).
-                parent_span: The span containing the current list of spans in
-                    the form: (start, end).
-
-            Returns:
-                A list of docutils Node objects.
-            """
-            # Get a list of top-level spans, including spans without any
-            # markup.
-            prev_end = parent_span[0]
-            top_level_spans = []
-            for (start, end), markup_type in markup_spans:
-                if start < prev_end:
-                    # This span is nested inside another span.
-                    continue
-
-                top_level_spans.append(((prev_end, start), None))
-                top_level_spans.append(((start, end), markup_type))
-
-                prev_end = end
-            top_level_spans.append(((prev_end, parent_span[1]), None))
-
-            # Create nodes from those spans.
-            top_level_nodes = []
-            for (start, end), markup_type in top_level_spans:
-                if markup_type is None:
-                    top_level_nodes.append(nodes.Text(text[start:end]))
-                elif markup_type == "strong":
-                    top_level_nodes.append(nodes.strong())
-                elif markup_type == "em":
-                    top_level_nodes.append(nodes.emphasis())
-
-            # Iterate over nested spans and add those nodes to their parent
-            # nodes.
-            for i, ((start, end), markup_type) in enumerate(top_level_spans):
-                if markup_type is None:
-                    continue
-
-                nested_spans = []
-                for (nested_start, nested_end), nested_type in markup_spans:
-                    if (nested_start in range(start, end)
-                            and nested_end in range(start, end + 1)
-                            and (nested_start, nested_end) != (start, end)):
-                        nested_spans.append(
-                            ((nested_start, nested_end), nested_type))
-
-                top_level_nodes[i] += parse_top_level(
-                    nested_spans, (start, end))
-
-            return top_level_nodes
-
-        return parse_top_level(markup_spans, (0, len(text)))
-
     def _parse_item(
             self, item: Item, extra_content: Optional[List[ExtraContent]]
             ) -> nodes.Element:
@@ -355,12 +338,12 @@ class LinotypeDirective(Directive):
                 text = _extend_auto(text, extra_content)
 
             if "no_manual_markup" in self.options:
-                text_positions = None
+                text_positions = MarkupPositions([], [])
             else:
                 text, text_positions = item.parse_manual_markup(text)
 
             node = nodes.paragraph(
-                "", "", *self._apply_markup(text, text_positions, None))
+                "", "", *_apply_markup(text, text_positions))
 
             extendable_node = node
         elif isinstance(item, DefinitionItem):
@@ -368,28 +351,27 @@ class LinotypeDirective(Directive):
             if extra_content:
                 msg = _extend_auto(msg, extra_content)
 
-            if "no_manual_markup" in self.options:
-                term_positions = args_positions = msg_positions = None
-            else:
+            if "no_manual_markup" not in self.options:
                 term, term_positions = item.parse_manual_markup(term)
                 args, args_positions = item.parse_manual_markup(args)
                 msg, msg_positions = item.parse_manual_markup(msg)
+            else:
+                term_positions = args_positions = msg_positions = (
+                    MarkupPositions([], []))
 
-            auto_term_positions = item.parse_term_markup(term)
-            auto_args_positions = item.parse_args_markup(args)
-            auto_msg_positions = item.parse_msg_markup(args, msg)
+            if "no_auto_markup" not in self.options:
+                term_positions += item.parse_term_markup(term)
+                args_positions += item.parse_args_markup(args)
+                msg_positions += item.parse_msg_markup(args, msg)
 
             node = nodes.definition_list_item(
                     "", nodes.term(
-                        "", "", *self._apply_markup(
-                            term, term_positions, auto_term_positions),
+                        "", "", *_apply_markup(term, term_positions),
                         nodes.Text(" "),
-                        *self._apply_markup(
-                            args, args_positions, auto_args_positions)),
+                        *_apply_markup(args, args_positions)),
                     nodes.definition(
                         "", nodes.paragraph(
-                            "", "", *self._apply_markup(
-                                msg, msg_positions, auto_msg_positions))))
+                            "", "", *_apply_markup(msg, msg_positions))))
 
             extendable_node = _get_matching_child(node, nodes.definition)
         else:
@@ -399,7 +381,6 @@ class LinotypeDirective(Directive):
             _extend_rst(extendable_node, extra_content)
 
         return node
-
 
     def _parse_tree(
             self, root_item: Item, extra_content: ExtraContentDict

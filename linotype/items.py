@@ -37,12 +37,21 @@ ARG_REGEX = re.compile(r"([\w-]+)")
 MARKUP_CHARS = collections.namedtuple(
     "MARKUP_CHARS", ["strong", "em"])("**", "*")
 
-# This keeps track of the positions of marked-up substrings in a string.
-# Each tuple contains the substring and the instance of that substring for
-# cases where there are more than one in the string.
-MarkupPositions = NamedTuple(
+MarkupPositionsBase = NamedTuple(
     "MarkupPositions",
     [("strong", List[Tuple[str, int]]), ("em", List[Tuple[str, int]])])
+
+
+class MarkupPositions(MarkupPositionsBase):
+    """Keep track of the positions of marked-up substring in a string.
+
+    Each tuple contains the substring and the instance of that substring for
+    cases where there are more than one in the string.
+    """
+    def __add__(self, other: "MarkupPositions"):
+        return MarkupPositions(
+            self.strong + other.strong,
+            self.em + other.em)
 
 
 class DefinitionStyle(enum.Enum):
@@ -486,37 +495,19 @@ class Item:
 
         return text, markup_positions
 
-    def _apply_markup(
-            self, text: str, manual_positions: MarkupPositions,
-            auto_positions: MarkupPositions) -> str:
+    def _apply_markup(self, text: str, positions: MarkupPositions) -> str:
         """Apply ANSI escape sequences to text at certain positions.
 
         Args:
             text: The text to apply the markup to.
-            manual_positions: The positions of substrings to apply manual
-                markup to.
-            auto_positions: The positions of substrings to apply auto markup
-                to.
+            positions: The positions of substrings to apply markup to.
 
         Returns:
             The original text with ANSI escape sequences added.
         """
-        if manual_positions is None:
-            manual_positions = MarkupPositions([], [])
-
-        if auto_positions is None:
-            auto_positions = MarkupPositions([], [])
-
         markup_spans = []
         for markup_type in ["strong", "em"]:
-            combined_positions = []
-
-            if self.formatter.manual_markup:
-                combined_positions += getattr(manual_positions, markup_type)
-            if self.formatter.auto_markup:
-                combined_positions += getattr(auto_positions, markup_type)
-
-            for substring, instance in combined_positions:
+            for substring, instance in getattr(positions, markup_type):
                 # Match any number of whitespace and newline characters
                 # between each word in the substring since line breaks can
                 # only happen between words. It is necessary to strip out
@@ -636,11 +627,11 @@ class TextItem(Item):
         if self.formatter.manual_markup:
             output_text, positions = self.parse_manual_markup(content)
         else:
-            output_text, positions = content, None
+            output_text, positions = content, MarkupPositions([], [])
 
         wrapper = self._get_wrapper()
         output_text = wrapper.fill(output_text)
-        output_text = self._apply_markup(output_text, positions, None)
+        output_text = self._apply_markup(output_text, positions)
         return output_text
 
 
@@ -801,8 +792,9 @@ class DefinitionItem(Item):
         # separately, spaces are used as filler in certain places so that
         # the text can be wrapped properly before the real text is
         # substituted.
-        auto_term_positions = self.parse_term_markup(term)
-        auto_args_positions = self.parse_args_markup(args)
+        if self.formatter.auto_markup:
+            term_positions += self.parse_term_markup(term)
+            args_positions += self.parse_args_markup(args)
 
         wrapper = self._get_wrapper(
             add_initial=-self.formatter.indent_increment,
@@ -816,11 +808,9 @@ class DefinitionItem(Item):
         output_sig = (
             wrapper.initial_indent
             + self._apply_markup(
-                output_term[self._current_indent:], term_positions,
-                auto_term_positions)
+                output_term[self._current_indent:], term_positions)
             + self._apply_markup(
-                output_args[term_buffer:], args_positions,
-                auto_args_positions))
+                output_args[term_buffer:], args_positions))
 
         return output_sig
 
@@ -843,7 +833,8 @@ class DefinitionItem(Item):
             args, args_positions = self.parse_manual_markup(args)
             msg, msg_positions = self.parse_manual_markup(msg)
         else:
-            term_positions = args_positions = msg_positions = None
+            term_positions = args_positions = msg_positions = (
+                MarkupPositions([], []))
 
         if aligned:
             sig_buffer = self._get_aligned_buffer()
@@ -862,10 +853,11 @@ class DefinitionItem(Item):
             add_initial=-self._current_indent,
             add_subsequent=subsequent_indent)
 
-        auto_msg_positions = self.parse_msg_markup(args, msg)
+        if self.formatter.auto_markup:
+            msg_positions += self.parse_msg_markup(args, msg)
+
         output_msg = wrapper.fill(" "*sig_buffer + msg)
-        output_msg = self._apply_markup(
-            output_msg, msg_positions, auto_msg_positions)
+        output_msg = self._apply_markup(output_msg, msg_positions)
 
         return output_sig + output_msg[sig_buffer:]
 
@@ -888,7 +880,8 @@ class DefinitionItem(Item):
             args, args_positions = self.parse_manual_markup(args)
             msg, msg_positions = self.parse_manual_markup(msg)
         else:
-            term_positions = args_positions = msg_positions = None
+            term_positions = args_positions = msg_positions = (
+                MarkupPositions([], []))
 
         output_sig = self._create_sig(
             term, args, term_positions, args_positions, 0)
@@ -907,9 +900,10 @@ class DefinitionItem(Item):
                 stack.enter_context(self._indent())
                 wrapper = self._get_wrapper()
 
-            auto_msg_positions = self.parse_msg_markup(args, msg)
+            if self.formatter.auto_markup:
+                msg_positions += self.parse_msg_markup(args, msg)
+
             output_msg = wrapper.fill(msg)
-            output_msg = self._apply_markup(
-                output_msg, msg_positions, auto_msg_positions)
+            output_msg = self._apply_markup(output_msg, msg_positions)
 
         return "\n".join([output_sig, output_msg])
