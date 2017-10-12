@@ -267,6 +267,10 @@ class Item:
         else:
             target_item = self.get_item_by_id(item_id)
 
+        if not target_item:
+            raise ValueError(
+                "an item with the ID '{0}' does not exist".format(item_id))
+
         dedent_amount = target_item._current_indent
         help_messages = []
         for item in self.get_items(levels=levels, item_id=item_id):
