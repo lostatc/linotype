@@ -34,7 +34,7 @@ def test_background_color():
 
 def test_style():
     """Setting the style results in correct output."""
-    assert ansi_format(style="bold") == ("\x1b[1m", "\x1b[0m")
+    assert ansi_format(bold=True) == ("\x1b[1m", "\x1b[0m")
 
 
 @pytest.mark.parametrize("color_spec", [128, "128"])
@@ -51,4 +51,4 @@ def test_hex_color(color_spec):
 
 def test_multiple_styles():
     """Using multiple styles results in correct output."""
-    assert ansi_format(style=["bold", "underline"]) == ("\x1b[1;4m", "\x1b[0m")
+    assert ansi_format(bold=True, underline=True) == ("\x1b[1;4m", "\x1b[0m")

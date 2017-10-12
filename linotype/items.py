@@ -101,8 +101,8 @@ class Formatter:
     def __init__(
             self, width=79, indent_increment=4, definition_buffer=2,
             definition_style=DefinitionStyle.BLOCK, auto_markup=True,
-            manual_markup=True, visible=True, strong=ansi_format(style="bold"),
-            em=ansi_format(style="underline")) -> None:
+            manual_markup=True, visible=True, strong=ansi_format(bold=True),
+            em=ansi_format(underline=True)) -> None:
         self.width = width
         self.indent_increment = indent_increment
         self.definition_buffer = definition_buffer

@@ -34,8 +34,8 @@ def formatter():
     formatter_instance = Formatter(
         width=79, indent_increment=4, definition_buffer=2,
         definition_style=DefinitionStyle.BLOCK, auto_markup=False,
-        manual_markup=False, visible=True, strong=ansi_format(style="bold"),
-        em=ansi_format(style="underline"))
+        manual_markup=False, visible=True, strong=ansi_format(bold=True),
+        em=ansi_format(underline=True))
     return formatter_instance
 
 

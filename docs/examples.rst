@@ -29,8 +29,8 @@ sequences to configure the style of markup in the text output.
 
     def help_message():
         formatter = Formatter(
-            strong=ansi_format(fg="red", style="bold"),
-            em=ansi_format(fg="green", style="bold"))
+            strong=ansi_format(fg="red", bold=True),
+            em=ansi_format(fg="green", bold=True))
         root_item = Item(formatter)
 
         root_item.add_text("This text has **strong** and *emphasized* markup.")
@@ -142,10 +142,10 @@ Hide message details
 --------------------
 To improve readability, you may want to hide certain details in your help
 message under certain circumstances. One example would be to have a global help
-message that displays an overview of all subcommands and then a more specific
-help message for each subcommand. This can be accomplished by limiting the
-number of levels of nested items to descend into or by making some items
-invisible via a **Formatter** class. The first method is shown below.
+message that displays an overview of all commands and then a separate help
+message with more details for each command. This can be accomplished by
+limiting the number of levels of nested items to descend into or by making some
+items invisible via a **Formatter** class. The first method is shown below.
 
 .. code-block:: python
     :linenos:
