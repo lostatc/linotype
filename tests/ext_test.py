@@ -541,12 +541,12 @@ def test_extend_rst():
                 <emphasis>
                     parent
                  text item.
-                <paragraph>
-                    This allows for
-                    <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                        hyperlinks
-                    <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                    .
+            <paragraph>
+                This allows for
+                <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                    hyperlinks
+                <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                .
         """)
 
     output = textwrap.dedent(parse_rst(rst))
@@ -569,12 +569,12 @@ def test_extend_rst_before():
     expected = textwrap.dedent("""\
         <document source="test">
             <paragraph>
-                <paragraph>
-                    This allows for
-                    <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                        hyperlinks
-                    <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                    .
+                This allows for
+                <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                    hyperlinks
+                <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                .
+            <paragraph>
                 This is the 
                 <emphasis>
                     parent
@@ -601,12 +601,11 @@ def test_extend_rst_replace():
     expected = textwrap.dedent("""\
         <document source="test">
             <paragraph>
-                <paragraph>
-                    This allows for
-                    <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                        hyperlinks
-                    <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                    .
+                This allows for
+                <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                    hyperlinks
+                <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                .
         """)
 
     output = textwrap.dedent(parse_rst(rst))
@@ -632,12 +631,12 @@ def test_extend_multiple():
     expected = textwrap.dedent("""\
         <document source="test">
             <paragraph>
-                <paragraph>
-                    This allows for
-                    <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                        hyperlinks
-                    <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                    .
+                This allows for
+                <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                    hyperlinks
+                <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                .
+            <paragraph>
                 This is the 
                 <emphasis>
                     parent

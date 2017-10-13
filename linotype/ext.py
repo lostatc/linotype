@@ -315,7 +315,7 @@ class LinotypeDirective(Directive):
 
     def _parse_item(
             self, item: Item, extra_content: Optional[List[ExtraContent]]
-            ) -> nodes.Element:
+            ) -> List[nodes.Element]:
         """Convert an Item object to a docutils Node object.
 
         Args:
@@ -328,8 +328,10 @@ class LinotypeDirective(Directive):
             ValueError: The type of the given item was not recognized.
 
         Returns:
-            A docutils node.
+            A list of docutils nodes.
         """
+        root_node = nodes.section()
+        
         if isinstance(item, TextItem):
             # Add a definition node after the paragraph node to act as a
             # starting point for new sub-nodes.
@@ -342,10 +344,12 @@ class LinotypeDirective(Directive):
             else:
                 text, text_positions = item.parse_manual_markup(text)
 
-            node = nodes.paragraph(
+            new_node = nodes.paragraph(
                 "", "", *_apply_markup(text, text_positions))
+            
+            root_node += new_node
 
-            extendable_node = node
+            extendable_node = root_node
         elif isinstance(item, DefinitionItem):
             term, args, msg = item.content
             if extra_content:
@@ -364,7 +368,7 @@ class LinotypeDirective(Directive):
                 args_positions += item.parse_args_markup(args)
                 msg_positions += item.parse_msg_markup(args, msg)
 
-            node = nodes.definition_list_item(
+            new_node = nodes.definition_list_item(
                     "", nodes.term(
                         "", "", *_apply_markup(term, term_positions),
                         nodes.Text(" "),
@@ -372,15 +376,16 @@ class LinotypeDirective(Directive):
                     nodes.definition(
                         "", nodes.paragraph(
                             "", "", *_apply_markup(msg, msg_positions))))
-
-            extendable_node = _get_matching_child(node, nodes.definition)
+            
+            root_node += new_node
+            extendable_node = _get_matching_child(new_node, nodes.definition)
         else:
             raise ValueError("unrecognized item type '{0}'".format(type(item)))
 
         if extra_content:
             _extend_rst(extendable_node, extra_content)
 
-        return node
+        return root_node.children
 
     def _parse_tree(
             self, root_item: Item, extra_content: ExtraContentDict
@@ -405,14 +410,14 @@ class LinotypeDirective(Directive):
         if type(root_item) is not Item:
             if root_item.parent:
                 # The root item is to be included in the output.
-                new_item = self._parse_item(
+                new_nodes = self._parse_item(
                     root_item, extra_content[root_item.id])
                 if isinstance(root_item, DefinitionItem):
                     definition_list = nodes.definition_list()
-                    definition_list.append(new_item)
-                    root_node.append(definition_list)
+                    definition_list += new_nodes
+                    root_node += definition_list
                 else:
-                    root_node.append(new_item)
+                    root_node += new_nodes
             else:
                 # The root item is not to be included in the output.
                 previous_level += 1
@@ -454,15 +459,15 @@ class LinotypeDirective(Directive):
                     new_parent = ancestor_nodes.pop()
                 parent_node = new_parent
 
-            new_item = self._parse_item(item, extra_content[item.id])
+            new_nodes = self._parse_item(item, extra_content[item.id])
             if isinstance(item, DefinitionItem):
                 # Wrap definitions in a definition_list.
                 if not parent_node.children or not isinstance(
                         parent_node[-1], nodes.definition_list):
                     parent_node.append(nodes.definition_list())
-                parent_node[-1].append(new_item)
+                parent_node[-1] += new_nodes
             else:
-                parent_node.append(new_item)
+                parent_node += new_nodes
                 
             previous_level = item.current_level
 
