@@ -33,8 +33,8 @@ def get_test_item():
     root_item = Item()
 
     text_item = root_item.add_text(
-        "This is the *parent* text item.", item_id="text")
-    text_item.add_text("This is the child text item.")
+        "This is the *parent* text item.", item_id="parent_text")
+    text_item.add_text("This is the child text item.", item_id="child_text")
     root_item.add_definition(
         "ls", "[options] files...", "List information about files.",
         item_id="definition")
@@ -161,7 +161,7 @@ def test_option_item_id():
         .. linotype::
             :module: tests.ext_test
             :function: get_test_item
-            :item_id: text
+            :item_id: parent_text
         """)
 
     expected = textwrap.dedent("""\
@@ -193,7 +193,7 @@ def test_option_children():
         .. linotype::
             :module: tests.ext_test
             :function: get_test_item
-            :item_id: text
+            :item_id: parent_text
             :children:
         """)
 
@@ -296,7 +296,7 @@ def test_extend_text_item():
             :module: tests.ext_test
             :function: get_test_item
             
-            text
+            parent_text
                 This comes after the existing content.
         """)
 

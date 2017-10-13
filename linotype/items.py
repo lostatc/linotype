@@ -387,7 +387,7 @@ class Item:
 
         parent_item = self.parent
         while parent_item.parent:
-            parent = parent_item.parent
+            parent_item = parent_item.parent
 
         return parent_item
 
