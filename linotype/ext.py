@@ -162,8 +162,12 @@ def _extend_rst(
         if "@after" in content.classifiers:
             extendable_node += content.nodes
         elif "@before" in content.classifiers:
-            extendable_node.children = (
-                content.nodes + extendable_node.children)
+            # The new nodes have to be added this way. Using insert() or
+            # reassigning extendable_node.children messes up the "parent"
+            # attribute for each of the children.
+            extendable_node.children.reverse()
+            extendable_node += reversed(content.nodes)
+            extendable_node.children.reverse()
         elif "@replace" in content.classifiers:
             extendable_node.children = content.nodes
 
