@@ -208,6 +208,53 @@ def test_option_children():
     assert output == expected
 
 
+def test_option_children_without_item_id():
+    """The :children: options does nothing without the :item_id: option."""
+    rst = textwrap.dedent("""\
+        .. linotype::
+            :module: tests.ext_test
+            :function: get_test_item
+            :children:
+        """)
+
+    expected = textwrap.dedent("""\
+        <document source="test">
+            <paragraph>
+                This is the 
+                <emphasis>
+                    parent
+                 text item.
+            <definition_list>
+                <definition_list_item>
+                    <term>
+                    <definition>
+                        <paragraph>
+                            This is the child text item.
+                <definition_list_item>
+                    <term>
+                        <strong>
+                            ls
+
+                        [
+                        <emphasis>
+                            options
+                        ] 
+                        <emphasis>
+                            files
+                        ...
+                    <definition>
+                        <paragraph>
+                            List information about 
+                            <emphasis>
+                                files
+                            .
+        """)
+
+    output = textwrap.dedent(parse_rst(rst))
+
+    assert output == expected
+
+
 def test_option_no_auto_markup():
     """The :no_auto_markup: option disables automatic markup."""
     rst = textwrap.dedent("""\
@@ -423,9 +470,8 @@ def test_extend_auto_with_unsupported_markup():
             :function: get_simple_test_item
             
             text
-                This doesn't allow for 
-                `hyperlinks <https://http://www.sphinx-doc.org>`_. 
-                This comes **after** the existing content.
+                This doesn't allow for ``inline literals``. This comes 
+                **after** the existing content.
         """)
 
     expected = textwrap.dedent("""\
@@ -434,9 +480,7 @@ def test_extend_auto_with_unsupported_markup():
                 This is the 
                 <emphasis>
                     parent
-                 text item. This doesn't allow for
-                `hyperlinks <https://http://www.sphinx-doc.org>`_.
-                This comes 
+                 text item. This doesn't allow for ``inline literals``. This comes
                 <strong>
                     after
                  the existing content.
@@ -530,8 +574,7 @@ def test_extend_rst():
             :function: get_simple_test_item
             
             text : @rst
-                This allows for
-                `hyperlinks <https://http://www.sphinx-doc.org>`_.
+                This allows for ``inline literals``.
         """)
 
     expected = textwrap.dedent("""\
@@ -542,10 +585,9 @@ def test_extend_rst():
                     parent
                  text item.
             <paragraph>
-                This allows for
-                <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                    hyperlinks
-                <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                This allows for 
+                <literal>
+                    inline literals
                 .
         """)
 
@@ -562,17 +604,15 @@ def test_extend_rst_before():
             :function: get_simple_test_item
             
             text : @rst : @before
-                This allows for
-                `hyperlinks <https://http://www.sphinx-doc.org>`_.
+                This allows for ``inline literals``.
         """)
 
     expected = textwrap.dedent("""\
         <document source="test">
             <paragraph>
-                This allows for
-                <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                    hyperlinks
-                <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                This allows for 
+                <literal>
+                    inline literals
                 .
             <paragraph>
                 This is the 
@@ -594,17 +634,15 @@ def test_extend_rst_replace():
             :function: get_simple_test_item
             
             text : @rst : @replace
-                This allows for
-                `hyperlinks <https://http://www.sphinx-doc.org>`_.
+                This allows for ``inline literals``.
         """)
 
     expected = textwrap.dedent("""\
         <document source="test">
             <paragraph>
-                This allows for
-                <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                    hyperlinks
-                <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                This allows for 
+                <literal>
+                    inline literals
                 .
         """)
 
@@ -624,17 +662,15 @@ def test_extend_multiple():
                 This comes **after** the existing content.
                 
             text : @rst : @before
-                This allows for
-                `hyperlinks <https://http://www.sphinx-doc.org>`_.
+                This allows for ``inline literals``.
         """)
 
     expected = textwrap.dedent("""\
         <document source="test">
             <paragraph>
-                This allows for
-                <reference name="hyperlinks" refuri="https://http://www.sphinx-doc.org">
-                    hyperlinks
-                <target ids="hyperlinks" names="hyperlinks" refuri="https://http://www.sphinx-doc.org">
+                This allows for 
+                <literal>
+                    inline literals
                 .
             <paragraph>
                 This is the 
