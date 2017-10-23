@@ -2,15 +2,16 @@ Usage
 =====
 Documentation in **linotype** consists of a tree of 'items' of which there are
 currently two types, *text* and *definitions*. Every item can contain other
-items which are indented relative to the parent item. The **Item** class is
-used to create a root-level item, and every **Item** object has public methods
-for creating new sub-items which in turn return a new **Item** object.
+items which are indented relative to the parent item. The
+:class:`linotype.Item` class is used to create a root-level item, and every
+:class:`linotype.Item` object has public methods for creating new sub-items
+which in turn return a new :class:`linotype.Item` object.
 
-Every **Item** object accepts a **Formatter** instance which is used to define
-how items are formatted in the text output. Every item can optionally be
-assigned an ID that can be referenced in the **Sphinx** documentation or when
-formatting the text output. Here is an example that prints a simple help
-message:
+Every :class:`linotype.Item` object accepts a :class:`linotype.Formatter`
+instance which is used to define how items are formatted in the text output.
+Every item can optionally be assigned an ID that can be referenced in the
+**Sphinx** documentation or when formatting the text output. Here is an example
+that prints a simple help message:
 
 .. code-block:: python
     :linenos:
@@ -29,10 +30,10 @@ message:
     print(help_message().format())
 
 Line wrapping, indentation, alignment and markup are all applied automatically
-according to attributes set in the **Formatter** object, so all text is passed
-into **linotype** as unformatted, single-line strings. Additionally, inline
-'strong' and 'emphasized' markup can be applied manually using the
-reStructuredText syntax::
+according to attributes set in the :class:`linotype.Formatter` object, so all
+text is passed into **linotype** as unformatted, single-line strings.
+Additionally, inline 'strong' and 'emphasized' markup can be applied manually
+using the reStructuredText syntax::
 
     This text is **strong**.
     This text is *emphasized*.
@@ -50,7 +51,7 @@ The documentation can be imported into your **Sphinx** documentation using the
 'linotype' directive. It accepts the following options:
 
 \:function\:
-    The name of the function which returns an **Item** object.
+    The name of the function which returns a :class:`linotype.Item` object.
 
 \:module\:
     The name of the module containing the function.

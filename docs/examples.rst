@@ -17,10 +17,12 @@ newline character.
         root_item.add_text("\n")
         root_item.add_text("This line comes after the break.")
 
+        return root_item
+
 Configure markup in text output
 -------------------------------
-The helper function **ansi_format** can be used to generate ANSI escape
-sequences to configure the style of markup in the text output.
+The helper function :func:`linotype.ansi_format` can be used to generate ANSI
+escape sequences to configure the style of markup in the text output.
 
 .. code-block:: python
     :linenos:
@@ -135,44 +137,49 @@ This is what your **Sphinx** source file could look like:
 
 Hide message details
 --------------------
-To improve readability, you may want to hide certain details in your help
+To improve readability, you may want to only show certain details in your help
 message under certain circumstances. One example would be to have a main help
 message that displays an overview of all commands and then a separate help
 message with more details for each command. This can be accomplished by:
 
-1. Limiting the number of levels of nested items to descend into.
-2. Conditionally making some items invisible via a **Formatter** class.
+1. Limiting the number of levels of nested items to descend into (see
+   :meth:`linotype.Item.format`).
+2. Conditionally making some items invisible via a :class:`linotype.Formatter`
+   class.
 3. Creating a separate function for the per-command help messages.
 
-The first way is shows below.
+The third method is shown below.
 
 .. code-block:: python
     :linenos:
 
     from linotype import Item
 
-    def help_message():
+    def main_help_message():
         root_item = Item()
 
         commands = root_item.add_text("Commands:")
+        commands.add_definition(
+            "rm-template", "[options] files...",
+            "Remove the template file for each of the source files specified.")
 
-        add_template_cmd = commands.add_definition(
-            "add-template", "[options] files...",
-            "Open one or more source files in your editor and save them each "
-            "as a template file.", item_id="add-template")
-        add_template_cmd.add_definition(
-            "-r, --revise", "",
-            "If the template file already exists, edit it instead of "
-            "creating a new one.")
+        return root_item
 
-        role_cmd = commands.add_definition(
-            "role", "[role_name [config_name]]",
-            "Make config_name the currently selected config file in the role "
-            "named role_name.", item_id="role")
+    def command_help_message():
+        root_item = Item()
+
+        rm_template = root_item.add_definition(
+            "rm-template", "[options] files...",
+            "Remove the template file for each of the source files specified. "
+            "Remove from each config file any option that isn't being "
+            "referenced in at least one template file.", item_id="rm-template")
+        rm_template.add_definition(
+            "-l, --leave-options", "",
+            "Do not remove options from config files.")
 
         return root_item
 
     if command:
-        print(help_message().format(item_id=command))
+        print(command_help_message().format(item_id=command))
     else:
-        print(help_message().format(levels=2))
+        print(main_help_message().format())
