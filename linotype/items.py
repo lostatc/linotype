@@ -20,6 +20,7 @@ along with linotype.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import enum
 import copy
+import shutil
 import textwrap
 import functools
 import contextlib
@@ -81,10 +82,12 @@ class Formatter:
     """Control how the text output is formatted.
 
     Attributes:
-        width: The number of columns at which to wrap text in the text output.
-        indent_increment: The number of spaces to increase/decrease the indent
+        max_width: The maximum number of columns at which to wrap text in the
+            text output. If the terminal is smaller than this, it will wrap to
+            the size of the terminal.
+        indent_spaces: The number of spaces to increase/decrease the indent
             level by for each level.
-        definition_buffer: The minimum number of spaces to leave between the
+        definition_gap: The minimum number of spaces to leave between the
             argument string and message of each definition when they are on the
             same line.
         definition_style: A DefinitionStyle instance representing the style of
@@ -99,13 +102,13 @@ class Formatter:
             marked up as 'emphasized'. The default is ANSI underlined.
     """
     def __init__(
-            self, width=79, indent_increment=4, definition_buffer=2,
+            self, max_width=79, indent_spaces=4, definition_gap=2,
             definition_style=DefinitionStyle.BLOCK, auto_markup=True,
             manual_markup=True, visible=True, strong=ansi_format(bold=True),
             em=ansi_format(underline=True)) -> None:
-        self.width = width
-        self.indent_increment = indent_increment
-        self.definition_buffer = definition_buffer
+        self.max_width = max_width
+        self.indent_spaces = indent_spaces
+        self.definition_gap = definition_gap
         self.definition_style = definition_style
         self.auto_markup = auto_markup
         self.manual_markup = manual_markup
@@ -161,7 +164,7 @@ class Item:
     @property
     def current_level(self) -> int:
         """The current indentation level."""
-        return int(self._current_indent / self.formatter.indent_increment)
+        return int(self._current_indent / self.formatter.indent_spaces)
 
     # Message building methods
     # ========================
@@ -394,9 +397,9 @@ class Item:
     @contextlib.contextmanager
     def _indent(self) -> None:
         """Temporarily increase the indentation level."""
-        self._current_indent += self.formatter.indent_increment
+        self._current_indent += self.formatter.indent_spaces
         yield
-        self._current_indent -= self.formatter.indent_increment
+        self._current_indent -= self.formatter.indent_spaces
 
     @staticmethod
     def parse_manual_markup(text: str) -> Tuple[str, MarkupPositions]:
@@ -557,32 +560,6 @@ class Item:
 
         return "".join(text_sequences)
 
-    def _get_wrapper(
-            self, add_initial=0, add_subsequent=0, drop_whitespace=True
-            ) -> textwrap.TextWrapper:
-        """Get a text wrapper for formatting text.
-
-        Args:
-            add_initial: A number of spaces to add to the initial indent level.
-            add_subsequent: A number of spaces to add to the subsequent indent
-                level.
-            drop_whitespace: Remove whitespace from the beginning and end of
-                every line.
-
-        Returns:
-            A TextWrapper instance.
-        """
-        initial_indent = self._current_indent + add_initial
-        subsequent_indent = self._current_indent + add_subsequent
-
-        wrapper = textwrap.TextWrapper(
-            width=self.formatter.width,
-            drop_whitespace=drop_whitespace,
-            initial_indent=" "*initial_indent,
-            subsequent_indent=" "*subsequent_indent)
-
-        return wrapper
-
 
 class TextItem(Item):
     """A text item to be displayed in the output.
@@ -629,10 +606,10 @@ class TextItem(Item):
         else:
             output_text, positions = content, MarkupPositions([], [])
 
-        wrapper = self._get_wrapper()
+        wrapper = textwrap.TextWrapper(width=self.formatter.max_width)
         output_text = wrapper.fill(output_text)
         output_text = self._apply_markup(output_text, positions)
-        return output_text
+        return textwrap.indent(output_text, " "*self._current_indent)
 
 
 class DefinitionItem(Item):
@@ -755,11 +732,11 @@ class DefinitionItem(Item):
             longest = max(
                 len(" ".join([string for string in (term, args) if string]))
                 for term, args, msg in aligned_content)
-            longest += self.formatter.definition_buffer
+            longest += self.formatter.definition_gap
         except ValueError:
             # There are no siblings that are definitions with the ALIGNED
             # style.
-            longest = self.formatter.indent_increment
+            longest = self.formatter.indent_spaces
 
         return longest
 
@@ -796,19 +773,18 @@ class DefinitionItem(Item):
             term_positions += self.parse_term_markup(term)
             args_positions += self.parse_args_markup(args)
 
-        wrapper = self._get_wrapper(
-            add_initial=-self.formatter.indent_increment,
+        wrapper = textwrap.TextWrapper(
+            width=self.formatter.max_width,
             drop_whitespace=False)
         output_args = "{0:<{1}}".format(
             " "*(term_buffer + 1) + args, sig_buffer)
         output_args = wrapper.fill(output_args)
 
-        wrapper = self._get_wrapper()
+        wrapper = textwrap.TextWrapper(width=self.formatter.max_width)
         output_term = wrapper.fill(term)
         output_sig = (
             wrapper.initial_indent
-            + self._apply_markup(
-                output_term[self._current_indent:], term_positions)
+            + self._apply_markup(output_term, term_positions)
             + self._apply_markup(
                 output_args[term_buffer:], args_positions))
 
@@ -836,30 +812,31 @@ class DefinitionItem(Item):
             term_positions = args_positions = msg_positions = (
                 MarkupPositions([], []))
 
+        if self.formatter.auto_markup:
+            msg_positions += self.parse_msg_markup(args, msg)
+
+        # Get the number of spaces that the messages should be indented by.
         if aligned:
             sig_buffer = self._get_aligned_buffer()
         else:
             sig_buffer = (
                 len(" ".join([string for string in (term, args) if string]))
-                + self.formatter.definition_buffer)
+                + self.formatter.definition_gap)
 
         output_sig = self._create_sig(
             term, args, term_positions, args_positions, sig_buffer)
 
-        subsequent_indent = self.formatter.indent_increment
+        subsequent_indent = self.formatter.indent_spaces
         if aligned:
             subsequent_indent += sig_buffer
-        wrapper = self._get_wrapper(
-            add_initial=-self._current_indent,
-            add_subsequent=subsequent_indent)
-
-        if self.formatter.auto_markup:
-            msg_positions += self.parse_msg_markup(args, msg)
+        wrapper = textwrap.TextWrapper(
+            width=self.formatter.max_width - self._current_indent,
+            subsequent_indent=" "*subsequent_indent)
 
         output_msg = wrapper.fill(" "*sig_buffer + msg)
         output_msg = self._apply_markup(output_msg, msg_positions)
 
-        return output_sig + output_msg[sig_buffer:]
+        return textwrap.indent(output_sig + output_msg[sig_buffer:], " "*self._current_indent)
 
     def _format_newline(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
@@ -883,27 +860,29 @@ class DefinitionItem(Item):
             term_positions = args_positions = msg_positions = (
                 MarkupPositions([], []))
 
+        if self.formatter.auto_markup:
+            msg_positions += self.parse_msg_markup(args, msg)
+
         output_sig = self._create_sig(
             term, args, term_positions, args_positions, 0)
 
         if not msg:
             return output_sig
 
-        with contextlib.ExitStack() as stack:
-            if aligned:
-                sig_buffer = self._get_aligned_buffer()
-                wrapper = self._get_wrapper(
-                    add_initial=sig_buffer,
-                    add_subsequent=(
-                        sig_buffer + self.formatter.indent_increment))
-            else:
-                stack.enter_context(self._indent())
-                wrapper = self._get_wrapper()
+        if aligned:
+            sig_buffer = self._get_aligned_buffer()
+            initial_indent = " "*sig_buffer
+            subsequent_indent = " "*(sig_buffer + self.formatter.indent_spaces)
+        else:
+            initial_indent = " "*self.formatter.indent_spaces
+            subsequent_indent = " "*self.formatter.indent_spaces
+        wrapper = textwrap.TextWrapper(
+            width=self.formatter.max_width - self._current_indent,
+            initial_indent=initial_indent,
+            subsequent_indent=subsequent_indent)
 
-            if self.formatter.auto_markup:
-                msg_positions += self.parse_msg_markup(args, msg)
+        output_msg = wrapper.fill(msg)
+        output_msg = self._apply_markup(output_msg, msg_positions)
 
-            output_msg = wrapper.fill(msg)
-            output_msg = self._apply_markup(output_msg, msg_positions)
-
-        return "\n".join([output_sig, output_msg])
+        return textwrap.indent(
+            "\n".join([output_sig, output_msg]), " "*self._current_indent)

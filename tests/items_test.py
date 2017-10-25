@@ -32,7 +32,7 @@ def formatter():
     changed in the future without breaking the tests.
     """
     formatter_instance = Formatter(
-        width=79, indent_increment=4, definition_buffer=2,
+        max_width=79, indent_spaces=4, definition_gap=2,
         definition_style=DefinitionStyle.BLOCK, auto_markup=False,
         manual_markup=False, visible=True, strong=ansi_format(bold=True),
         em=ansi_format(underline=True))
@@ -222,9 +222,9 @@ def test_nested_items_limit(formatter):
     assert root_item.format(levels=1) == expected_output
 
 
-def test_change_indent_increment(formatter):
+def test_change_indent_spaces(formatter):
     """Changes to the indentation are reflected in the output."""
-    formatter.indent_increment = 2
+    formatter.indent_spaces = 2
     root_item = Item(formatter)
     first_level = root_item.add_text("This is the first level of text.")
     first_level.add_text("This is the second level of text.")
@@ -237,7 +237,7 @@ def test_change_indent_increment(formatter):
 
 def test_change_width(formatter):
     """Changes to the text width are reflected in the output."""
-    formatter.width = 99
+    formatter.max_width = 99
     root_item = Item(formatter)
     root_item.add_text(
         "This is a long string of text that must be wrapped properly. No "
@@ -259,9 +259,9 @@ def test_change_visible(formatter):
     assert root_item.format() == ""
 
 
-def test_change_definition_buffer(formatter):
+def test_change_definition_gap(formatter):
     """Changes to the definition buffer are reflected in the output."""
-    formatter.definition_buffer = 4
+    formatter.definition_gap = 4
     formatter.definition_style = DefinitionStyle.INLINE
     root_item = Item(formatter)
     root_item.add_definition(
