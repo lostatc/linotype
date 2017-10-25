@@ -236,7 +236,7 @@ def test_change_indent_spaces(formatter):
 
 
 def test_change_width(formatter):
-    """Changes to the text width are reflected in the output."""
+    """Changes to the width are reflected in the output."""
     formatter.max_width = 99
     root_item = Item(formatter)
     root_item.add_text(
@@ -246,6 +246,42 @@ def test_change_width(formatter):
     expected_output = textwrap.dedent("""\
         This is a long string of text that must be wrapped properly. No markup is applied, and the whole
         thing is indented to the same level.""")
+
+    assert root_item.format() == expected_output
+
+
+def test_definition_inline_wrapping(formatter):
+    """Definition items with the INLINE style wrap properly."""
+    formatter.max_width = 48
+    formatter.definition_style = DefinitionStyle.INLINE
+    root_item = Item(formatter)
+    root_item.add_definition(
+        "diff", "[options] number1..number2 [files]",
+        "Compare the snapshots number1 and number2. This text ensures that "
+        "subsequent lines are wrapped properly.")
+    expected_output = textwrap.dedent("""\
+        diff [options] number1..number2 [files]  Compare
+            the snapshots number1 and number2. This text
+            ensures that subsequent lines are wrapped
+            properly.""")
+
+    assert root_item.format() == expected_output
+
+
+def test_definition_aligned_wrapping(formatter):
+    """Definition items with the ALIGNED style wrap properly."""
+    formatter.max_width = 49
+    formatter.definition_style = DefinitionStyle.ALIGNED
+    root_item = Item(formatter)
+    root_item.add_definition(
+        "diff", "[options]",
+        "Compare the snapshots number1 and number2. This text ensures that "
+        "all subsequent lines are wrapped properly.")
+    expected_output = textwrap.dedent("""\
+        diff [options]  Compare the snapshots number1 and
+                            number2. This text ensures
+                            that all subsequent lines are
+                            wrapped properly.""")
 
     assert root_item.format() == expected_output
 
