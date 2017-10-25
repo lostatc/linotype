@@ -189,8 +189,8 @@ class Item:
         return self._add_item(TextItem, text, formatter, item_id)
 
     def add_definition(
-            self, term: str, args: str, msg: str, formatter=None, item_id=None
-            ) -> "Item":
+            self, term: str, args: str, message: str, formatter=None,
+            item_id=None) -> "Item":
         """Add a definition to be printed.
 
         This item displays a formatted definition in one of multiple styles.
@@ -204,7 +204,7 @@ class Item:
                 single string. If auto markup is enabled, consecutive strings
                 of unicode word characters (arguments) are emphasized in the
                 text output.
-            msg: A description of the thing being defined, with arguments
+            message: A description of the thing being defined, with arguments
                 that appear in the argument string emphasized if auto markup
                 is enabled.
             formatter: A Formatter instance for defining the formatting of the
@@ -216,7 +216,7 @@ class Item:
             The new Item object.
         """
         return self._add_item(
-            DefinitionItem, [term, args, msg], formatter, item_id)
+            DefinitionItem, [term, args, message], formatter, item_id)
 
     def _add_item(
             self, item_type, content: Any,
@@ -323,11 +323,11 @@ class Item:
             The formatted text output as a string.
         """
         if self.parent and self.formatter.visible:
-            help_msg = self._format_func(self.content)
+            help_message = self._format_func(self.content)
         else:
-            help_msg = None
+            help_message = None
 
-        return help_msg
+        return help_message
 
     def _depth_search(
             self, item: "Item", levels=None, counter=0
@@ -702,7 +702,7 @@ class DefinitionItem(Item):
         return positions
 
     @staticmethod
-    def parse_msg_markup(args: str, text: str) -> MarkupPositions:
+    def parse_message_markup(args: str, text: str) -> MarkupPositions:
         """Get the positions of markup for the definition message.
 
         This method only formats arguments surrounded by non-word characters.
@@ -746,7 +746,7 @@ class DefinitionItem(Item):
         try:
             longest = max(
                 len(" ".join([string for string in (term, args) if string]))
-                for term, args, msg in aligned_content)
+                for term, args, message in aligned_content)
             longest += self.formatter.definition_gap
         except ValueError:
             # There are no siblings that are definitions with the ALIGNED
@@ -755,13 +755,13 @@ class DefinitionItem(Item):
 
         return longest
 
-    def _create_sig(
+    def _create_signature(
             self, term: str, args: str, term_positions: MarkupPositions,
-            args_positions: MarkupPositions, sig_buffer: int) -> str:
+            args_positions: MarkupPositions, signature_buffer: int) -> str:
         """Create a signature for a definition.
 
         A 'signature' is the concatenation of the definition's term and
-        argument string.
+        argument string. It is not wrapped, no matter how long it is.
 
         Args:
             term: The term to be defined.
@@ -770,7 +770,7 @@ class DefinitionItem(Item):
                 term string.
             args_positions: The positions at which to insert markup for the
                 argument string.
-            sig_buffer: The amount of space there should be between the
+            signature_buffer: The amount of space there should be between the
                 beginning of the line and the message.
 
         Returns:
@@ -788,22 +788,15 @@ class DefinitionItem(Item):
             term_positions += self.parse_term_markup(term)
             args_positions += self.parse_args_markup(args)
 
-        wrapper = textwrap.TextWrapper(
-            width=self._width,
-            drop_whitespace=False)
         output_args = "{0:<{1}}".format(
-            " "*(term_buffer + 1) + args, sig_buffer)
-        output_args = wrapper.fill(output_args)
+            " "*(term_buffer + 1) + args, signature_buffer)
 
-        wrapper = textwrap.TextWrapper(width=self._width)
-        output_term = wrapper.fill(term)
-        output_sig = (
-            wrapper.initial_indent
-            + self._apply_markup(output_term, term_positions)
+        output_signature = (
+            self._apply_markup(term, term_positions)
             + self._apply_markup(
                 output_args[term_buffer:], args_positions))
 
-        return output_sig
+        return output_signature
 
     def _format_sameline(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
@@ -818,40 +811,43 @@ class DefinitionItem(Item):
         Returns:
             The formatted definition as a string.
         """
-        term, args, msg = content
+        term, args, message = content
         if self.formatter.manual_markup:
             term, term_positions = self.parse_manual_markup(term)
             args, args_positions = self.parse_manual_markup(args)
-            msg, msg_positions = self.parse_manual_markup(msg)
+            message, message_positions = self.parse_manual_markup(message)
         else:
-            term_positions = args_positions = msg_positions = (
+            term_positions = args_positions = message_positions = (
                 MarkupPositions([], []))
 
         if self.formatter.auto_markup:
-            msg_positions += self.parse_msg_markup(args, msg)
+            message_positions += self.parse_message_markup(args, message)
 
-        # Get the number of spaces that the messages should be indented by.
+        # Get the total length of the term and argument string.
         if aligned:
-            sig_buffer = self._get_aligned_buffer()
+            signature_buffer = self._get_aligned_buffer()
         else:
-            sig_buffer = (
+            signature_buffer = (
                 len(" ".join([string for string in (term, args) if string]))
                 + self.formatter.definition_gap)
 
-        output_sig = self._create_sig(
-            term, args, term_positions, args_positions, sig_buffer)
+        # This is the combined term and argument string.
+        output_signature = self._create_signature(
+            term, args, term_positions, args_positions, signature_buffer)
 
         subsequent_indent = self.formatter.indent_spaces
         if aligned:
-            subsequent_indent += sig_buffer
+            subsequent_indent += signature_buffer
         wrapper = textwrap.TextWrapper(
             width=self._width - self._current_indent,
             subsequent_indent=" "*subsequent_indent)
 
-        output_msg = wrapper.fill(" "*sig_buffer + msg)
-        output_msg = self._apply_markup(output_msg, msg_positions)
+        output_message = wrapper.fill(" "*signature_buffer + message)
+        output_message = self._apply_markup(output_message, message_positions)
 
-        return textwrap.indent(output_sig + output_msg[sig_buffer:], " "*self._current_indent)
+        return textwrap.indent(
+            output_signature + output_message[signature_buffer:],
+            " "*self._current_indent)
 
     def _format_newline(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
@@ -866,28 +862,29 @@ class DefinitionItem(Item):
         Returns:
             The formatted definition as a string.
         """
-        term, args, msg = content
+        term, args, message = content
         if self.formatter.manual_markup:
             term, term_positions = self.parse_manual_markup(term)
             args, args_positions = self.parse_manual_markup(args)
-            msg, msg_positions = self.parse_manual_markup(msg)
+            message, message_positions = self.parse_manual_markup(message)
         else:
-            term_positions = args_positions = msg_positions = (
+            term_positions = args_positions = message_positions = (
                 MarkupPositions([], []))
 
         if self.formatter.auto_markup:
-            msg_positions += self.parse_msg_markup(args, msg)
+            message_positions += self.parse_message_markup(args, message)
 
-        output_sig = self._create_sig(
+        # This is the combined term and argument string.
+        output_signature = self._create_signature(
             term, args, term_positions, args_positions, 0)
 
-        if not msg:
-            return textwrap.indent(output_sig, " "*self._current_indent)
+        if not message:
+            return textwrap.indent(output_signature, " "*self._current_indent)
 
         if aligned:
-            sig_buffer = self._get_aligned_buffer()
-            initial_indent = " "*sig_buffer
-            subsequent_indent = " "*(sig_buffer + self.formatter.indent_spaces)
+            signature_buffer = self._get_aligned_buffer()
+            initial_indent = " "*signature_buffer
+            subsequent_indent = " "*(signature_buffer + self.formatter.indent_spaces)
         else:
             initial_indent = " "*self.formatter.indent_spaces
             subsequent_indent = " "*self.formatter.indent_spaces
@@ -896,8 +893,8 @@ class DefinitionItem(Item):
             initial_indent=initial_indent,
             subsequent_indent=subsequent_indent)
 
-        output_msg = wrapper.fill(msg)
-        output_msg = self._apply_markup(output_msg, msg_positions)
+        output_message = wrapper.fill(message)
+        output_message = self._apply_markup(output_message, message_positions)
 
         return textwrap.indent(
-            "\n".join([output_sig, output_msg]), " "*self._current_indent)
+            "\n".join([output_signature, output_message]), " "*self._current_indent)

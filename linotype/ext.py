@@ -355,22 +355,22 @@ class LinotypeDirective(Directive):
 
             extendable_node = root_node
         elif isinstance(item, DefinitionItem):
-            term, args, msg = item.content
+            term, args, message = item.content
             if extra_content:
-                msg = _extend_auto(msg, extra_content)
+                message = _extend_auto(message, extra_content)
 
             if "no_manual_markup" not in self.options:
                 term, term_positions = item.parse_manual_markup(term)
                 args, args_positions = item.parse_manual_markup(args)
-                msg, msg_positions = item.parse_manual_markup(msg)
+                message, message_positions = item.parse_manual_markup(message)
             else:
-                term_positions = args_positions = msg_positions = (
+                term_positions = args_positions = message_positions = (
                     MarkupPositions([], []))
 
             if "no_auto_markup" not in self.options:
                 term_positions += item.parse_term_markup(term)
                 args_positions += item.parse_args_markup(args)
-                msg_positions += item.parse_msg_markup(args, msg)
+                message_positions += item.parse_message_markup(args, message)
 
             new_node = nodes.definition_list_item(
                     "", nodes.term(
@@ -379,7 +379,7 @@ class LinotypeDirective(Directive):
                         *_apply_markup(args, args_positions)),
                     nodes.definition(
                         "", nodes.paragraph(
-                            "", "", *_apply_markup(msg, msg_positions))))
+                            "", "", *_apply_markup(message, message_positions))))
             
             root_node += new_node
             extendable_node = _get_matching_child(new_node, nodes.definition)
