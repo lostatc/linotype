@@ -83,8 +83,8 @@ class Formatter:
 
     Attributes:
         max_width: The maximum number of columns at which to wrap text in the
-            text output. If the terminal is smaller than this, it will wrap to
-            the size of the terminal.
+            text output.
+        auto_width: Wrap the text to the size of the terminal.
         indent_spaces: The number of spaces to increase/decrease the indent
             level by for each level.
         definition_gap: The minimum number of spaces to leave between the
@@ -102,11 +102,13 @@ class Formatter:
             marked up as 'emphasized'. The default is ANSI underlined.
     """
     def __init__(
-            self, max_width=79, indent_spaces=4, definition_gap=2,
-            definition_style=DefinitionStyle.BLOCK, auto_markup=True,
-            manual_markup=True, visible=True, strong=ansi_format(bold=True),
-            em=ansi_format(underline=True)) -> None:
+            self, max_width=79, auto_width=True, indent_spaces=4,
+            definition_gap=2, definition_style=DefinitionStyle.BLOCK,
+            auto_markup=True, manual_markup=True, visible=True,
+            strong=ansi_format(bold=True), em=ansi_format(underline=True)
+            ) -> None:
         self.max_width = max_width
+        self.auto_width = auto_width
         self.indent_spaces = indent_spaces
         self.definition_gap = definition_gap
         self.definition_style = definition_style
@@ -401,6 +403,19 @@ class Item:
         yield
         self._current_indent -= self.formatter.indent_spaces
 
+    @property
+    def _width(self) -> int:
+        """Get the number of columns to wrap text to.
+
+        This is either the width of the terminal window or the maximum width
+        set in the Formatter instance, whichever is smaller.
+        """
+        if self.formatter.auto_width:
+            return min(
+                self.formatter.max_width, shutil.get_terminal_size().columns)
+        else:
+            return self.formatter.max_width
+
     @staticmethod
     def parse_manual_markup(text: str) -> Tuple[str, MarkupPositions]:
         """Remove reST markup characters from text and get their positions.
@@ -606,7 +621,7 @@ class TextItem(Item):
         else:
             output_text, positions = content, MarkupPositions([], [])
 
-        wrapper = textwrap.TextWrapper(width=self.formatter.max_width)
+        wrapper = textwrap.TextWrapper(width=self._width)
         output_text = wrapper.fill(output_text)
         output_text = self._apply_markup(output_text, positions)
         return textwrap.indent(output_text, " "*self._current_indent)
@@ -774,13 +789,13 @@ class DefinitionItem(Item):
             args_positions += self.parse_args_markup(args)
 
         wrapper = textwrap.TextWrapper(
-            width=self.formatter.max_width,
+            width=self._width,
             drop_whitespace=False)
         output_args = "{0:<{1}}".format(
             " "*(term_buffer + 1) + args, sig_buffer)
         output_args = wrapper.fill(output_args)
 
-        wrapper = textwrap.TextWrapper(width=self.formatter.max_width)
+        wrapper = textwrap.TextWrapper(width=self._width)
         output_term = wrapper.fill(term)
         output_sig = (
             wrapper.initial_indent
@@ -830,7 +845,7 @@ class DefinitionItem(Item):
         if aligned:
             subsequent_indent += sig_buffer
         wrapper = textwrap.TextWrapper(
-            width=self.formatter.max_width - self._current_indent,
+            width=self._width - self._current_indent,
             subsequent_indent=" "*subsequent_indent)
 
         output_msg = wrapper.fill(" "*sig_buffer + msg)
@@ -867,7 +882,7 @@ class DefinitionItem(Item):
             term, args, term_positions, args_positions, 0)
 
         if not msg:
-            return output_sig
+            return textwrap.indent(output_sig, " "*self._current_indent)
 
         if aligned:
             sig_buffer = self._get_aligned_buffer()
@@ -877,7 +892,7 @@ class DefinitionItem(Item):
             initial_indent = " "*self.formatter.indent_spaces
             subsequent_indent = " "*self.formatter.indent_spaces
         wrapper = textwrap.TextWrapper(
-            width=self.formatter.max_width - self._current_indent,
+            width=self._width - self._current_indent,
             initial_indent=initial_indent,
             subsequent_indent=subsequent_indent)
 

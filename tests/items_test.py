@@ -32,7 +32,7 @@ def formatter():
     changed in the future without breaking the tests.
     """
     formatter_instance = Formatter(
-        max_width=79, indent_spaces=4, definition_gap=2,
+        max_width=79, auto_width=False, indent_spaces=4, definition_gap=2,
         definition_style=DefinitionStyle.BLOCK, auto_markup=False,
         manual_markup=False, visible=True, strong=ansi_format(bold=True),
         em=ansi_format(underline=True))
