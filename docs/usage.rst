@@ -23,7 +23,7 @@ that prints a simple help message:
 
         usage = root_item.add_text("Usage:")
         usage.add_definition(
-            "codot", "[global_options] command [command_args]", "")
+            "todo", "[global_options] command [command_args]", "")
 
         return root_item
 
@@ -111,17 +111,17 @@ Here is an example of a **Sphinx** source file using the directive:
     :linenos:
 
     .. linotype::
-        :module: codot.cli
+        :module: todo.cli
         :function: help_message
 
-        add-template
+        add
             This content is added after the existing content for the item with
-            the ID 'add-template.' Markup is applied automatically.
+            the ID 'add.' Markup is applied automatically.
 
-        add-template : @before : @rst
+        add : @before : @rst
             This content is added before the existing content for the item with
-            the ID 'add-template.' reStrcturedText elements can be used.
+            the ID 'add.' reStrcturedText elements can be used.
 
-        role : @replace
+        check : @replace
             This content replaces the existing content for the item with the ID
-            'role.' Markup is applied automatically.
+            'check.' Markup is applied automatically.

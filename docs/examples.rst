@@ -54,22 +54,23 @@ latter style is intended for options that are too long to otherwise fit.
     from linotype import DefinitionStyle, Formatter, Item
 
     def help_message():
-        formatter = Formatter(definition_style=DefinitionStyle.ALIGNED)
-        root_item = Item(formatter)
+        aligned_formatter = Formatter(definition_style=DefinitionStyle.ALIGNED)
+        overflow_formatter = Formatter(definition_style=DefinitionStyle.OVERFLOW)
+
+        root_item = Item(aligned_formatter)
 
         root_item.add_definition(
-            "-q, --quiet", "",
-            "Suppress non-error messages.")
+            "-q, --quiet", "", "Suppress all non-error output.")
         root_item.add_definition(
-            "-v, --verbose", "",
-            "Increase verbosity.")
+            "-v, --verbose", "", "Increase verbosity.")
         root_item.add_definition(
-            "    --info", "FLAGS",
-            "Fine-grained informational verbosity.")
-        root_item.formatter.definition_style = DefinitionStyle.OVERFLOW
+            "    --debug", "",
+            "Print a full stack trace instead of an error message if an error "
+            "occurs.")
         root_item.add_definition(
-            "    --only-write-batch", "FILE",
-            "Like --write-batch but without updating dest.")
+            "    --from-file", "path",
+            "Use the list from the file located at path.",
+            formatter=overflow_formatter)
 
         return root_item
 
@@ -77,11 +78,12 @@ latter style is intended for options that are too long to otherwise fit.
 
 This is what the output looks like::
 
-    -q, --quiet       Suppress non-error messages.
-    -v, --verbose     Increase verbosity.
-        --info FLAGS  Fine-grained informational verbosity.
-        --only-write-batch FILE
-                      Like --write-batch but without updating dest.
+    -q, --quiet    Suppress all non-error output.
+    -v, --verbose  Increase verbosity.
+        --debug    Print a full stack trace instead of an error message if an
+                       error occurs.
+        --from-file path
+                   Use the list from the file located at path.
 
 Split message into sections
 ---------------------------
@@ -99,11 +101,11 @@ This can be accomplished by assigning item IDs.
 
         usage = root_item.add_text("Usage:", item_id="usage")
         usage.add_definition(
-            "codot", "[global_options] command [command_args]", "")
+            "todo", "[global_options] command [command_args]", "")
 
         global_opts = root_item.add_text("Global Options:", item_id="global")
         global_opts.add_definition(
-            "--help", "", "Print a usage message and exit.")
+            "-q, --quiet", "", "Suppress all non-error output.")
 
         return root_item
 
@@ -117,20 +119,15 @@ This is what your **Sphinx** source file could look like:
     SYNOPSIS
     ========
     .. linotype::
-        :module: codot.cli
+        :module: todo.cli
         :function: help_message
         :item_id: usage
         :children:
 
-    DESCRIPTION
-    ===========
-    codot is a program for consolidating your dotfiles so that settings for
-    multiple applications can be modified from one set of files.
-
     GLOBAL OPTIONS
     ==============
     .. linotype::
-        :module: codot.cli
+        :module: todo.cli
         :function: help_message
         :item_id: global
         :children:
@@ -160,22 +157,20 @@ The third method is shown below.
 
         commands = root_item.add_text("Commands:")
         commands.add_definition(
-            "rm-template", "[options] files...",
-            "Remove the template file for each of the source files specified.")
+            "check", "[options] tasks...",
+            "Mark one or more tasks as completed.")
 
         return root_item
 
     def command_help_message():
         root_item = Item()
 
-        rm_template = root_item.add_definition(
-            "rm-template", "[options] files...",
-            "Remove the template file for each of the source files specified. "
-            "Remove from each config file any option that isn't being "
-            "referenced in at least one template file.", item_id="rm-template")
-        rm_template.add_definition(
-            "-l, --leave-options", "",
-            "Do not remove options from config files.")
+        check = root_item.add_definition(
+            "check", "[options] tasks...",
+            "Mark one or more tasks as completed. These will appear hidden in "
+            "the list.", item_id="check")
+        check.add_definition(
+            "-r, --remove", "", "Remove the tasks from the list.")
 
         return root_item
 
