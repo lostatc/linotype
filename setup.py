@@ -15,11 +15,11 @@ setup(
         "Operating System :: MacOS",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3",
         "Topic :: Software Development :: Documentation"],
     install_requires=["sphinx"],
     python_requires=">=3.5",
     tests_require=["pytest"],
+    extras_require={
+        "Windows support": ["colorama"]},
     packages=["linotype"])

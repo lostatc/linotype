@@ -34,6 +34,12 @@ from docutils.parsers.rst.states import Inliner
 
 from linotype.ansi import ansi_format
 
+try:
+    import colorama
+    colorama.init()
+except ModuleNotFoundError:
+    pass
+
 ARG_REGEX = re.compile(r"([\w-]+)")
 MARKUP_CHARS = collections.namedtuple(
     "MARKUP_CHARS", ["strong", "em"])("**", "*")
