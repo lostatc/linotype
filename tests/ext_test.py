@@ -35,7 +35,7 @@ def get_test_item():
     text_item = root_item.add_text(
         "This is the *parent* text item.", item_id="parent_text")
     text_item.add_text("This is the child text item.", item_id="child_text")
-    root_item.add_definition(
+    root_item.add_def(
         "ls", "[options] files...", "List information about files.",
         item_id="definition")
 

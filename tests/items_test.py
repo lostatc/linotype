@@ -21,7 +21,7 @@ import textwrap
 
 import pytest
 
-from linotype import DefinitionStyle, Formatter, Item, ansi_format
+from linotype import DefStyle, Formatter, Item, ansi_format
 
 
 @pytest.fixture
@@ -32,8 +32,8 @@ def formatter():
     changed in the future without breaking the tests.
     """
     formatter_instance = Formatter(
-        max_width=79, auto_width=False, indent_spaces=4, definition_gap=2,
-        definition_style=DefinitionStyle.BLOCK, auto_markup=False,
+        max_width=79, auto_width=False, indent_spaces=4, def_gap=2,
+        def_style=DefStyle.PARAGRAPH, auto_markup=False,
         manual_markup=False, visible=True, strong=ansi_format(bold=True),
         em=ansi_format(underline=True))
     return formatter_instance
@@ -77,11 +77,11 @@ def test_text_manual_markup_across_line_breaks(formatter):
     assert root_item.format() == expected_output
 
 
-def test_definition_block_formatting(formatter):
-    """The BLOCK style of definition items format properly."""
-    formatter.definition_style = DefinitionStyle.BLOCK
+def test_definition_paragraph_formatting(formatter):
+    """The PARAGRAPH style of definition items format properly."""
+    formatter.def_style = DefStyle.PARAGRAPH
     root_item = Item(formatter)
-    root_item.add_definition(
+    root_item.add_def(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.")
     expected_output = textwrap.dedent("""\
@@ -93,9 +93,9 @@ def test_definition_block_formatting(formatter):
 
 def test_definition_inline_formatting(formatter):
     """The INLINE style of definition items format properly."""
-    formatter.definition_style = DefinitionStyle.INLINE
+    formatter.def_style = DefStyle.INLINE
     root_item = Item(formatter)
-    root_item.add_definition(
+    root_item.add_def(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.")
     expected_output = textwrap.dedent("""\
@@ -107,13 +107,13 @@ def test_definition_inline_formatting(formatter):
 
 def test_definition_overflow_formatting(formatter):
     """The OVERFLOW style of definition items format properly."""
-    formatter.definition_style = DefinitionStyle.OVERFLOW
+    formatter.def_style = DefStyle.OVERFLOW
     root_item = Item(formatter)
-    root_item.add_definition(
+    root_item.add_def(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.")
-    root_item.formatter.definition_style = DefinitionStyle.ALIGNED
-    root_item.add_definition(
+    root_item.formatter.def_style = DefStyle.ALIGNED
+    root_item.add_def(
         "modify", "[options] number",
         "Modify a snapshot.")
     expected_output = textwrap.dedent("""\
@@ -126,12 +126,12 @@ def test_definition_overflow_formatting(formatter):
 
 def test_definition_aligned_formatting(formatter):
     """The ALIGNED style of definition items format properly."""
-    formatter.definition_style = DefinitionStyle.ALIGNED
+    formatter.def_style = DefStyle.ALIGNED
     root_item = Item(formatter)
-    root_item.add_definition(
+    root_item.add_def(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.")
-    root_item.add_definition(
+    root_item.add_def(
         "modify", "[options] number",
         "Modify a snapshot.")
     expected_output = textwrap.dedent("""\
@@ -146,7 +146,7 @@ def test_definition_auto_markup(formatter):
     """Markup is automatically applied to definitions."""
     formatter.auto_markup = True
     root_item = Item(formatter)
-    root_item.add_definition(
+    root_item.add_def(
         "diff", "[options] number1..number2",
         "Compare the snapshots number1 and number2.")
     expected_output = textwrap.dedent("""\
@@ -160,7 +160,7 @@ def test_definition_manual_markup(formatter):
     """Manual markup can be applied to definition items."""
     formatter.manual_markup = True
     root_item = Item(formatter)
-    root_item.add_definition(
+    root_item.add_def(
         "**--file**", "*FILE*", "Obtain patterns from *FILE*, one per line.")
     expected_output = textwrap.dedent("""\
         \x1b[1m--file\x1b[0m \x1b[4mFILE\x1b[0m
@@ -174,7 +174,7 @@ def test_definition_nested_markup(formatter):
     formatter.auto_markup = True
     formatter.manual_markup = True
     root_item = Item(formatter)
-    root_item.add_definition(
+    root_item.add_def(
         "--file", "FILE", "Obtain patterns from **FILE, one per** line.")
     expected_output = textwrap.dedent("""\
         \x1b[1m--file\x1b[0m \x1b[4mFILE\x1b[0m
@@ -185,10 +185,10 @@ def test_definition_nested_markup(formatter):
 
 def test_definition_change_style_retroactively(formatter):
     root_item = Item(formatter)
-    option = root_item.add_definition(
+    option = root_item.add_def(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.")
-    option.formatter.definition_style = DefinitionStyle.INLINE
+    option.formatter.def_style = DefStyle.INLINE
     expected_output = textwrap.dedent("""\
         diff [options] number1..number2 [files]  Compare the snapshots number1 and
             number2.""")
@@ -253,9 +253,9 @@ def test_change_width(formatter):
 def test_definition_inline_wrapping(formatter):
     """Definition items with the INLINE style wrap properly."""
     formatter.max_width = 48
-    formatter.definition_style = DefinitionStyle.INLINE
+    formatter.def_style = DefStyle.INLINE
     root_item = Item(formatter)
-    root_item.add_definition(
+    root_item.add_def(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2. This text ensures that "
         "subsequent lines are wrapped properly.")
@@ -271,9 +271,9 @@ def test_definition_inline_wrapping(formatter):
 def test_definition_aligned_wrapping(formatter):
     """Definition items with the ALIGNED style wrap properly."""
     formatter.max_width = 49
-    formatter.definition_style = DefinitionStyle.ALIGNED
+    formatter.def_style = DefStyle.ALIGNED
     root_item = Item(formatter)
-    root_item.add_definition(
+    root_item.add_def(
         "diff", "[options]",
         "Compare the snapshots number1 and number2. This text ensures that "
         "all subsequent lines are wrapped properly.")
@@ -295,12 +295,12 @@ def test_change_visible(formatter):
     assert root_item.format() == ""
 
 
-def test_change_definition_gap(formatter):
+def test_change_def_gap(formatter):
     """Changes to the definition buffer are reflected in the output."""
-    formatter.definition_gap = 4
-    formatter.definition_style = DefinitionStyle.INLINE
+    formatter.def_gap = 4
+    formatter.def_style = DefStyle.INLINE
     root_item = Item(formatter)
-    root_item.add_definition(
+    root_item.add_def(
         "diff", "[options] number1..number2 [files]",
         "Compare the snapshots number1 and number2.")
     expected_output = textwrap.dedent("""\

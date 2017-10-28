@@ -51,23 +51,23 @@ latter style is intended for options that are too long to otherwise fit.
 .. code-block:: python
     :linenos:
 
-    from linotype import DefinitionStyle, Formatter, Item
+    from linotype import DefStyle, Formatter, Item
 
     def help_message():
-        aligned_formatter = Formatter(definition_style=DefinitionStyle.ALIGNED)
-        overflow_formatter = Formatter(definition_style=DefinitionStyle.OVERFLOW)
+        aligned_formatter = Formatter(def_style=DefStyle.ALIGNED)
+        overflow_formatter = Formatter(def_style=DefStyle.OVERFLOW)
 
         root_item = Item(aligned_formatter)
 
-        root_item.add_definition(
+        root_item.add_def(
             "-q, --quiet", "", "Suppress all non-error output.")
-        root_item.add_definition(
+        root_item.add_def(
             "-v, --verbose", "", "Increase verbosity.")
-        root_item.add_definition(
+        root_item.add_def(
             "    --debug", "",
             "Print a full stack trace instead of an error message if an error "
             "occurs.")
-        root_item.add_definition(
+        root_item.add_def(
             "    --from-file", "path",
             "Use the list from the file located at path.",
             formatter=overflow_formatter)
@@ -100,11 +100,11 @@ This can be accomplished by assigning item IDs.
         root_item = Item()
 
         usage = root_item.add_text("Usage:", item_id="usage")
-        usage.add_definition(
+        usage.add_def(
             "todo", "[global_options] command [command_args]", "")
 
         global_opts = root_item.add_text("Global Options:", item_id="global")
-        global_opts.add_definition(
+        global_opts.add_def(
             "-q, --quiet", "", "Suppress all non-error output.")
 
         return root_item
@@ -156,7 +156,7 @@ The third method is shown below.
         root_item = Item()
 
         commands = root_item.add_text("Commands:")
-        commands.add_definition(
+        commands.add_def(
             "check", "[options] tasks...",
             "Mark one or more tasks as completed.")
 
@@ -165,11 +165,11 @@ The third method is shown below.
     def command_help_message():
         root_item = Item()
 
-        check = root_item.add_definition(
+        check = root_item.add_def(
             "check", "[options] tasks...",
             "Mark one or more tasks as completed. These will appear hidden in "
             "the list.", item_id="check")
-        check.add_definition(
+        check.add_def(
             "-r, --remove", "", "Remove the tasks from the list.")
 
         return root_item

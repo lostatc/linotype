@@ -61,24 +61,24 @@ class MarkupPositions(MarkupPositionsBase):
             self.em + other.em)
 
 
-class DefinitionStyle(enum.Enum):
+class DefStyle(enum.Enum):
     """Styles for definition items.
 
     Attributes:
-        BLOCK, B: Display the message on a separate line from the term and
+        PARAGRAPH, P: Display the message on a separate line from the term and
             argument string.
-        OVERFLOW, O: Display the message on a separate line from the term and
-            argument string and align the message with those of all other
-            definitions that belong to the same parent item and have a style of
-            ALIGNED. Use a hanging indent if the message is too long.
         INLINE, I: Display the message on the same line as the term and
             argument string. Use a hanging indent if the message is too long.
         ALIGNED, A: Display the message on the same line as the term and
             argument string and align the message with those of all other
             definitions that belong to the same parent item and have the style
             ALIGNED. Use a hanging indent if the message is too long.
+        OVERFLOW, O: Display the message on a separate line from the term and
+            argument string and align the message with those of all other
+            definitions that belong to the same parent item and have a style of
+            ALIGNED. Use a hanging indent if the message is too long.
     """
-    BLOCK = B = 1
+    PARAGRAPH = P = 1
     OVERFLOW = O = 2
     INLINE = I = 3
     ALIGNED = A = 4
@@ -93,11 +93,11 @@ class Formatter:
         auto_width: Wrap the text to the size of the terminal.
         indent_spaces: The number of spaces to increase/decrease the indent
             level by for each level.
-        definition_gap: The minimum number of spaces to leave between the
-            argument string and message of each definition when they are on the
-            same line.
-        definition_style: A DefinitionStyle instance representing the style of
-            definition to use.
+        def_gap: The minimum number of spaces to leave between the argument
+            string and message of each definition when they are on the same
+            line.
+        def_style: A DefStyle instance representing the style of definition to
+            use.
         auto_markup: Automatically apply 'strong' and 'emphasized' formatting
             to certain text in the output.
         manual_markup: Parse reST 'strong' and 'emphasized' inline markup.
@@ -109,15 +109,15 @@ class Formatter:
     """
     def __init__(
             self, max_width=79, auto_width=True, indent_spaces=4,
-            definition_gap=2, definition_style=DefinitionStyle.BLOCK,
+            def_gap=2, def_style=DefStyle.PARAGRAPH,
             auto_markup=True, manual_markup=True, visible=True,
             strong=ansi_format(bold=True), em=ansi_format(underline=True)
             ) -> None:
         self.max_width = max_width
         self.auto_width = auto_width
         self.indent_spaces = indent_spaces
-        self.definition_gap = definition_gap
-        self.definition_style = definition_style
+        self.def_gap = def_gap
+        self.def_style = def_style
         self.auto_markup = auto_markup
         self.manual_markup = manual_markup
         self.visible = visible
@@ -194,7 +194,7 @@ class Item:
         """
         return self._add_item(TextItem, text, formatter, item_id)
 
-    def add_definition(
+    def add_def(
             self, term: str, args: str, message: str, formatter=None,
             item_id=None) -> "Item":
         """Add a definition to be printed.
@@ -669,14 +669,14 @@ class DefinitionItem(Item):
         Returns:
              The function for formatting the text output.
         """
-        style = self.formatter.definition_style
-        if style is DefinitionStyle.BLOCK:
+        style = self.formatter.def_style
+        if style is DefStyle.PARAGRAPH:
             return functools.partial(self._format_newline, aligned=False)
-        elif style is DefinitionStyle.OVERFLOW:
+        elif style is DefStyle.OVERFLOW:
             return functools.partial(self._format_newline, aligned=True)
-        elif style is DefinitionStyle.INLINE:
+        elif style is DefStyle.INLINE:
             return functools.partial(self._format_sameline, aligned=False)
-        elif style is DefinitionStyle.ALIGNED:
+        elif style is DefStyle.ALIGNED:
             return functools.partial(self._format_sameline, aligned=True)
 
     @staticmethod
@@ -748,12 +748,12 @@ class DefinitionItem(Item):
         aligned_content = (
             item.content for item in self.parent.children
             if isinstance(item, type(self))
-            and item.formatter.definition_style is DefinitionStyle.ALIGNED)
+            and item.formatter.def_style is DefStyle.ALIGNED)
         try:
             longest = max(
                 len(" ".join([string for string in (term, args) if string]))
                 for term, args, message in aligned_content)
-            longest += self.formatter.definition_gap
+            longest += self.formatter.def_gap
         except ValueError:
             # There are no siblings that are definitions with the ALIGNED
             # style.
@@ -835,7 +835,7 @@ class DefinitionItem(Item):
         else:
             signature_buffer = (
                 len(" ".join([string for string in (term, args) if string]))
-                + self.formatter.definition_gap)
+                + self.formatter.def_gap)
 
         # This is the combined term and argument string.
         output_signature = self._create_signature(
@@ -857,7 +857,7 @@ class DefinitionItem(Item):
 
     def _format_newline(
             self, content: Tuple[str, str, str], aligned: bool) -> str:
-        """Format a BLOCK or OVERFLOW definition for the text output.
+        """Format a PARAGRAPH or OVERFLOW definition for the text output.
 
         Args:
             content: A tuple containing the term, args and message for the

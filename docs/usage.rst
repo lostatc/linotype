@@ -22,7 +22,7 @@ that prints a simple help message:
         root_item = Item()
 
         usage = root_item.add_text("Usage:")
-        usage.add_definition(
+        usage.add_def(
             "todo", "[global_options] command [command_args]", "")
 
         return root_item
