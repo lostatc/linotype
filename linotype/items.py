@@ -65,8 +65,8 @@ class DefStyle(enum.Enum):
     """Styles for definition items.
 
     Attributes:
-        PARAGRAPH, P: Display the message on a separate line from the term and
-            argument string.
+        PARAGRAPH, P: Display the message as a paragraph on a separate line
+            from the term and argument string.
         INLINE, I: Display the message on the same line as the term and
             argument string. Use a hanging indent if the message is too long.
         ALIGNED, A: Display the message on the same line as the term and
@@ -130,17 +130,15 @@ class Item:
 
     This class allows for formatting text output consisting of a tree of
     "items". There are multiple types of items to choose from, and every
-    item can contain zero or more other items. Each level of nested items
-    increases the indentation level, and items at the same level are
-    displayed at the order in which they were created.
+    item can contain other items which are indented relative to the parent
+    item. Items at the same level are displayed at the order in which they
+    were created.
 
-    The text output can be printed starting at any point in the tree,
-    and the output is automatically formatted according to the formatter
-    object passed in. Formatter objects can be passed in whenever a new item
-    is created to affect its formatting.
-
-    Every item can optionally be assigned a unique ID that can be referenced
-    in the Sphinx documentation or when formatting the text output.
+    This class is used to create a root-level item, and new child items can
+    be created using its public methods. Every item has a Formatter instance
+    which determines how it is formatted in the text output. Every item also
+    has an ID which can be referenced in the Sphinx documentation or when
+    formatting the text output.
 
     Args:
         formatter: The Formatter object for the item tree.
@@ -197,7 +195,7 @@ class Item:
     def add_def(
             self, term: str, args: str, message: str, formatter=None,
             item_id=None) -> "Item":
-        """Add a definition to be printed.
+        """Add a definition item to be printed.
 
         This item displays a formatted definition in one of multiple styles.
         The style is set by the Formatter instance. Definitions consist of a
@@ -207,9 +205,9 @@ class Item:
             term: The command, option, etc. to be defined. If auto markup is
                 enabled, this is strong in the text output.
             args: The list of arguments for the thing being defined as a
-                single string. If auto markup is enabled, consecutive strings
-                of unicode word characters (arguments) are emphasized in the
-                text output.
+                single string. If auto markup is enabled, arguments are
+                emphasized in the text output. Arguments are consecutive
+                strings of unicode word characters
             message: A description of the thing being defined, with arguments
                 that appear in the argument string emphasized if auto markup
                 is enabled.
@@ -230,12 +228,11 @@ class Item:
         """Add a new item under the current item.
 
         Args:
-            item_type: The type of item that the current item is.
+            item_type: The type of the new item.
             content: The content to print.
-            formatter: A Formatter object for defining the formatting of the
-                new item. If 'None,' it uses the formatter of its parent item.
-            item_id: A unique ID for the item that can be referenced in the
-                Sphinx documentation.
+            formatter: A Formatter object for the item. If 'None,' it uses the
+                formatter of its parent item.
+            item_id: A unique ID for the item.
 
         Raises:
             ValueError: The given item ID is already in use.
@@ -266,12 +263,7 @@ class Item:
     # ==========================
 
     def format(self, levels=None, item_id=None) -> str:
-        """Join the text output of each item.
-
-        This method will return the text output from all descendants of the
-        root item as determined by the 'item_id' argument. Whether or not
-        the root item has parents, the output will be left-aligned and
-        wrapped accordingly.
+        """Print a tree of items.
 
         Args:
             levels: The number of levels of nested items to descend into.
@@ -279,7 +271,7 @@ class Item:
                 current item.
 
         Returns:
-            The joined text outputs as a string.
+            The text output as a single string.
         """
         # Dedent the output so that it's flush with the left edge.
         if item_id is None:
