@@ -36,9 +36,10 @@ from linotype.ansi import ansi_format
 
 try:
     import colorama
-    colorama.init()
 except ModuleNotFoundError:
     pass
+else:
+    colorama.init()
 
 ARG_REGEX = re.compile(r"([\w-]+)")
 MARKUP_CHARS = collections.namedtuple(
@@ -161,6 +162,15 @@ class Item:
         self.parent = None
         self.children = []
         self._current_indent = 0
+
+    def __repr__(self) -> str:
+        if self.children:
+            child_reprs = [
+                "<{}>".format(type(child).__name__) for child in self.children]
+        else:
+            child_reprs = [""]
+
+        return "<{0}: {1}>".format(type(self).__name__, " ".join(child_reprs))
 
     @property
     def _format_func(self) -> Callable:
