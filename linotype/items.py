@@ -36,7 +36,7 @@ from linotype.ansi import ansi_format
 
 try:
     import colorama
-except ImportErrort:
+except ImportError:
     pass
 else:
     colorama.init()
