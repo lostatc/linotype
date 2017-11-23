@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="linotype",
-    version="0.1.1",
+    version="0.2.0",
     description="Automatically format help messages.",
     long_description="See GitHub page for more details.",
     url="https://github.com/lostatc/linotype",
