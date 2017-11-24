@@ -21,7 +21,7 @@ import os
 import re
 import importlib
 import collections
-from typing import List, Tuple, NamedTuple, Optional, DefaultDict, Set
+from typing import List, Tuple, NamedTuple, Optional, Dict, Set
 
 from docutils import nodes
 from docutils.parsers.rst import Directive
@@ -35,7 +35,7 @@ from linotype.items import Item, TextItem, DefinitionItem, MarkupPositions
 ExtraContent = NamedTuple(
     "ExtraContent",
     [("classifiers", Set[str]), ("nodes", List[nodes.Element])])
-ExtraContentDict = DefaultDict[str, List[ExtraContent]]
+ExtraContentDict = Dict[str, List[ExtraContent]]
 
 CONTENT_CLASSIFIERS = {"@after", "@before", "@replace"}
 MARKUP_CLASSIFIERS = {"@auto", "@rst"}
@@ -501,7 +501,7 @@ class LinotypeDirective(Directive):
         if def_list is not None:
             definitions = _parse_definition_list(def_list)
         else:
-            definitions = ExtraContentDict(lambda: None)
+            definitions = collections.defaultdict(lambda: None)
 
         return self._parse_tree(root_item, definitions)
 
