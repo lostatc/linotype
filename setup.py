@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="linotype",
-    version="0.2.0",
+    version="0.2.1",
     description="Automatically format help messages.",
     long_description="See GitHub page for more details.",
     url="https://github.com/lostatc/linotype",
@@ -14,7 +14,7 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: MacOS",
         "Operating System :: Microsoft :: Windows",
-        "Operating System :: POSIX :: Linux",
+        "Operating System :: POSIX",
         "Programming Language :: Python :: 3",
         "Topic :: Software Development :: Documentation"],
     install_requires=["sphinx"],

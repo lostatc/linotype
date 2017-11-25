@@ -12,11 +12,11 @@ Line wrapping, indentation, alignment and markup are all applied automatically,
 making your help message easier to maintain so that you can focus on the
 content.
 
-This library focuses on providing significantly more options for configuring
-your help message than **argparse** in the Python standard library. It gives
-you full control over the structure and formatting and allows you to do many
-things that are impossible with **argparse** alone. See the full documentation
-below for more details.
+This library provides significantly more options for configuring your help
+message than **argparse** in the Python standard library. It gives you full
+control over the structure and formatting and allows you to do many things that
+are impossible with **argparse** alone. See the full documentation below for
+more details.
 
 `Documentation <https://linotype.readthedocs.io/en/latest/index.html>`_
 
